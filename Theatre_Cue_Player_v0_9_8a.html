@@ -3,7 +3,7 @@ Theatre Cue Player
 
 Developed by Kevin Patrick
 
-v0.9.8 - Last Updated January 1, 2026
+v0.9.8b - Last Updated June 11, 2026 - fix trim and delay showing in status window
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -2124,10 +2124,15 @@ v0.9.8 - Last Updated January 1, 2026
                 if (cue.delay && cue.delay > 0) {
                     this.handleContinue(cue);
 
+                    session.pending = true;
+                    session.delayStart = this.ctx.currentTime;
+                    session.delayDuration = cue.delay / 1000;
+
                     const timeoutId = setTimeout(() => {
                         this.delayTimeouts.delete(cueKey);
-                        // Validate session still exists (wasn't stopped during delay)
                         if (this.playingCues.has(cueKey)) {
+                            const s = this.playingCues.get(cueKey);
+                            if (s) { s.pending = false; }
                             this.triggerCuePlayback(cue);
                         }
                     }, cue.delay);
@@ -4806,7 +4811,24 @@ v0.9.8 - Last Updated January 1, 2026
                         const cue = this.app.state.getCue(cueKey);
                         if (!cue) return;
 
-                        if (session.type === 'audio') {
+                        if (session.pending) {
+                            // Pending delay countdown
+                            const delayElapsed = now - session.delayStart;
+                            const delayRemaining = Math.max(0, session.delayDuration - delayElapsed);
+                            const delayProgress = Math.min(100, (delayElapsed / session.delayDuration) * 100);
+                            html += `
+                            <div class="active-cue-card" style="opacity:0.75">
+                                <div class="active-cue-header">
+                                    <span>Q${cue.cueNumber}: ${cue.label}</span>
+                                    <span style="color:#ffc107">Waiting...</span>
+                                </div>
+                                <div class="active-cue-time">
+                                    <span style="font-size:0.8em; opacity:0.8;">Starts in ${delayRemaining.toFixed(1)}s</span>
+                                </div>
+                                <div class="active-cue-progress" style="background: rgba(255,193,7,0.4); width: ${delayProgress}%"></div>
+                            </div>`;
+                        }
+                        else if (session.type === 'audio') {
                             // Audio Logic
                             if (session.instances && session.instances.length > 0) {
                                 const inst = session.instances[session.instances.length - 1]; // Latest
