@@ -1935,6 +1935,7 @@ v0.9.8 - Last Updated January 1, 2026
                         <span class="wf-help-icon"
                             onclick="app.ui.showHelp('Vertical Zoom', 'Vertical Zoom: make quiet peaks look taller to see them better. Does not change volume. R resets view.', event)">?</span>
                     </div>
+                    <button id="wfHighContrastBtn" class="btn btn-secondary" style="padding:2px 10px; font-size:0.8rem;" onclick="app.ui.wfToggleHighContrast()" title="Toggle high-visibility colors for projection">⬛ High Contrast</button>
                 </div>
             </div>
 
@@ -3800,7 +3801,8 @@ v0.9.8 - Last Updated January 1, 2026
                     playbackState: 'stopped',
                     animationId: null,
                     video: null,
-                    previewSources: new Set()
+                    previewSources: new Set(),
+                    highContrast: false
                 };
             }
 
@@ -5537,11 +5539,23 @@ v0.9.8 - Last Updated January 1, 2026
                 const end = start + visibleDiff;
                 const pixelsPerSec = width / visibleDiff;
 
+                // Color palette — switches for high contrast mode
+                const hc = this.waveform.highContrast;
+                const palette = {
+                    waveform:   hc ? '#00ffff' : '#007bff',
+                    fadeIn:     hc ? 'rgba(0,255,128,0.45)' : 'rgba(0,255,0,0.2)',
+                    fadeOut:    hc ? 'rgba(255,220,0,0.45)'  : 'rgba(255,255,0,0.2)',
+                    trimStart:  hc ? '#00ff00' : '#28a745',
+                    trimEnd:    hc ? '#ff3300' : '#dc3545',
+                    playhead:   hc ? '#ffff00' : '#ffffff',
+                    hatchColor: hc ? 'rgba(255,255,0,0.55)' : 'rgba(255,255,255,0.25)',
+                };
+
                 // 1. Clear & Background
                 ctx.fillStyle = '#000000';
                 ctx.fillRect(0, 0, width, height);
 
-                // 2. Draw Waveform (Blue) - Optimized for Viewport
+                // 2. Draw Waveform - Optimized for Viewport
                 const buffer = this.currentWaveformCue.audioBuffer;
                 const data = buffer.getChannelData(0);
 
@@ -5551,7 +5565,7 @@ v0.9.8 - Last Updated January 1, 2026
                 const center = height / 2;
 
                 ctx.beginPath();
-                ctx.strokeStyle = '#007bff';
+                ctx.strokeStyle = palette.waveform;
                 ctx.lineWidth = 1;
 
                 // Pixels loop
@@ -5624,45 +5638,65 @@ v0.9.8 - Last Updated January 1, 2026
                 const xFadeInEnd = timeToX(trimStart + fadeIn);
                 const xFadeOutStart = timeToX(effectiveEnd - fadeOut);
 
-                // 3. Draw Trimmed Areas (Dimmed / Masked)
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
-                // Left Mask
-                if (xTrimStart > 0) ctx.fillRect(0, 0, xTrimStart, height);
-                // Right Mask
-                if (xTrimEnd < width) ctx.fillRect(xTrimEnd, 0, width - xTrimEnd, height);
+                // 3. Draw Trimmed Areas — dark fill + hatched overlay
+                // Build hatch pattern once per frame
+                const patCanvas = document.createElement('canvas');
+                patCanvas.width = 8; patCanvas.height = 8;
+                const patCtx = patCanvas.getContext('2d');
+                patCtx.strokeStyle = palette.hatchColor;
+                patCtx.lineWidth = 1.5;
+                patCtx.beginPath();
+                patCtx.moveTo(0, 8); patCtx.lineTo(8, 0);
+                patCtx.moveTo(-2, 2); patCtx.lineTo(2, -2);
+                patCtx.moveTo(6, 10); patCtx.lineTo(10, 6);
+                patCtx.stroke();
+                const hatchPattern = ctx.createPattern(patCanvas, 'repeat');
 
-                // 4. Draw Fade In Zone (Green)
+                const drawTrimMask = (x, w) => {
+                    if (w <= 0) return;
+                    ctx.fillStyle = 'rgba(0,0,0,0.72)';
+                    ctx.fillRect(x, 0, w, height);
+                    ctx.fillStyle = hatchPattern;
+                    ctx.fillRect(x, 0, w, height);
+                };
+                if (xTrimStart > 0) drawTrimMask(0, xTrimStart);
+                if (xTrimEnd < width) drawTrimMask(xTrimEnd, width - xTrimEnd);
+
+                // 4. Draw Fade In Zone
                 if (fadeIn > 0) {
-                    ctx.fillStyle = 'rgba(0, 255, 0, 0.2)';
+                    ctx.fillStyle = palette.fadeIn;
                     const w = xFadeInEnd - xTrimStart;
                     if (w > 0) ctx.fillRect(xTrimStart, 0, w, height);
                 }
 
-                // 5. Draw Fade Out Zone (Yellow)
+                // 5. Draw Fade Out Zone
                 if (fadeOut > 0) {
-                    ctx.fillStyle = 'rgba(255, 255, 0, 0.2)';
+                    ctx.fillStyle = palette.fadeOut;
                     const w = xTrimEnd - xFadeOutStart;
                     if (w > 0) ctx.fillRect(xFadeOutStart, 0, w, height);
                 }
 
-                // 6. Draw Trim Lines (Red)
-                ctx.strokeStyle = '#dc3545';
+                // 6. Draw Trim Lines — start=green, end=red
                 ctx.lineWidth = 2;
-                ctx.beginPath();
                 if (xTrimStart >= -5 && xTrimStart <= width + 5) {
+                    ctx.strokeStyle = palette.trimStart;
+                    ctx.beginPath();
                     ctx.moveTo(xTrimStart, 0); ctx.lineTo(xTrimStart, height);
+                    ctx.stroke();
                 }
                 if (xTrimEnd >= -5 && xTrimEnd <= width + 5) {
+                    ctx.strokeStyle = palette.trimEnd;
+                    ctx.beginPath();
                     ctx.moveTo(xTrimEnd, 0); ctx.lineTo(xTrimEnd, height);
+                    ctx.stroke();
                 }
-                ctx.stroke();
 
-                // 7. Draw Playhead (White)
+                // 7. Draw Playhead
                 const playheadTime = this.waveform.playhead || 0;
                 const xPlayhead = timeToX(playheadTime);
 
                 if (xPlayhead >= 0 && xPlayhead <= width) {
-                    ctx.strokeStyle = '#ffffff';
+                    ctx.strokeStyle = palette.playhead;
                     ctx.lineWidth = 2;
                     ctx.beginPath();
                     ctx.moveTo(xPlayhead, 0);
@@ -5860,6 +5894,17 @@ v0.9.8 - Last Updated January 1, 2026
 
             wfVZoomReset() {
                 this.waveform.vZoom = 1.0;
+                this.updateWaveformDisplay();
+            }
+
+            wfToggleHighContrast() {
+                this.waveform.highContrast = !this.waveform.highContrast;
+                const btn = document.getElementById('wfHighContrastBtn');
+                if (btn) {
+                    btn.style.background = this.waveform.highContrast ? '#ffd700' : '';
+                    btn.style.color = this.waveform.highContrast ? '#000' : '';
+                    btn.style.fontWeight = this.waveform.highContrast ? 'bold' : '';
+                }
                 this.updateWaveformDisplay();
             }
 
