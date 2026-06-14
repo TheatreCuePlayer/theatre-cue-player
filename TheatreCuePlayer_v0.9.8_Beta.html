@@ -2950,27 +2950,16 @@ v0.9.8 - Last Updated January 1, 2026
                 // Plan says: "If active is "A", try "B"..." so imply detection from previous cue.
 
                 if (isAlpha) {
-                    // Alphabetic Logic
-                    // 1. Try Next Letter (A -> B)
-                    // 2. If B exists, try A.1 (Decimal extension) OR A1? 
-                    // Requirements part 1.3: "If B exists, try A.1 (or A1)"
-                    // Let's stick to consistent dot notation: A -> B. If B exists -> A.1
+                    if (!currentNumStr.includes('.')) {
+                        // Pure alpha (e.g. "A"): try next letter first, then branch to subcue
+                        let next = this.nextAlpha(currentNumStr);
+                        if (!this.cueExists(next)) return next;
 
-                    // Simple next:
-                    let next = this.nextAlpha(currentNumStr);
-                    if (!this.cueExists(next)) return next;
-
-                    // Fallback to branching: A -> A.1
-                    let branch = currentNumStr + ".1";
-                    if (!this.cueExists(branch)) return branch;
-
-                    // Deep branch: A.1 -> A.2
-                    // A.1 is technically mixed? 
-                    // Let's rely on a more generic "parts" parser?
-
-                    // Complexity: "A" -> "B". "A.1" -> "A.2".
-                    // If "A" exists and next "B" exists, we want to insert UNDER A.
-                    // So we want child of A. -> "A.1".
+                        // Next letter taken: branch to A.1
+                        let branch = currentNumStr + ".1";
+                        if (!this.cueExists(branch)) return branch;
+                    }
+                    // Subcue like "A.1": fall through to general dot-increment logic below
                 }
 
                 // General Logic covering both Alpha-with-suffix and Numeric
