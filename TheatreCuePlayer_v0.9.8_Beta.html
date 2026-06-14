@@ -3753,6 +3753,42 @@ v0.9.8 - Last Updated January 1, 2026
                 cursor: pointer;
                 font-size: 0.9rem;
             }
+            .selection-modal-search {
+                position: relative;
+                display: flex;
+                align-items: center;
+                padding: 0.5rem 1rem;
+                border-bottom: 1px solid #444;
+                background: #2a2a2a;
+                flex-shrink: 0;
+            }
+            .selection-modal-search input {
+                flex: 1;
+                background: #333;
+                color: #fff;
+                border: 1px solid #555;
+                border-radius: 4px;
+                padding: 0.38rem 2rem 0.38rem 0.6rem;
+                font-size: 0.9rem;
+            }
+            .selection-modal-search input:focus {
+                outline: none;
+                border-color: #007bff;
+            }
+            .selection-modal-search input::placeholder { color: #777; }
+            #selectionModalClear {
+                position: absolute;
+                right: 1.4rem;
+                background: none;
+                border: none;
+                color: #888;
+                cursor: pointer;
+                font-size: 0.78rem;
+                padding: 0;
+                line-height: 1;
+                display: none;
+            }
+            #selectionModalClear:hover { color: #fff; }
         `;
                 document.head.appendChild(style);
             }
@@ -4715,15 +4751,63 @@ v0.9.8 - Last Updated January 1, 2026
                         <span id="selectionModalTitle">Select Item</span>
                         <button class="selection-modal-cancel" onclick="document.getElementById('selectionModal').style.display='none'; document.body.focus();">Cancel</button>
                     </div>
+                    <div class="selection-modal-search">
+                        <input type="text" id="selectionModalSearch" placeholder="Filter…" autocomplete="off" spellcheck="false">
+                        <button id="selectionModalClear" title="Clear (Esc)">✕</button>
+                    </div>
                     <div class="selection-modal-body" id="selectionModalBody"></div>
                 </div>
                 `;
                     document.body.appendChild(modal);
+
+                    const searchInput = document.getElementById('selectionModalSearch');
+                    const clearBtn = document.getElementById('selectionModalClear');
+
+                    const applyFilter = () => {
+                        const term = searchInput.value.toLowerCase();
+                        clearBtn.style.display = searchInput.value ? 'block' : 'none';
+                        document.getElementById('selectionModalBody')
+                            .querySelectorAll('.selection-modal-btn')
+                            .forEach(btn => {
+                                btn.style.display = btn.textContent.toLowerCase().includes(term) ? '' : 'none';
+                            });
+                    };
+
+                    const clearFilter = () => {
+                        searchInput.value = '';
+                        clearBtn.style.display = 'none';
+                        document.getElementById('selectionModalBody')
+                            .querySelectorAll('.selection-modal-btn')
+                            .forEach(btn => btn.style.display = '');
+                        searchInput.focus();
+                    };
+
+                    searchInput.addEventListener('input', applyFilter);
+
+                    searchInput.addEventListener('keydown', (e) => {
+                        if (e.key === 'Escape') {
+                            e.preventDefault();
+                            if (searchInput.value) {
+                                clearFilter();
+                            } else {
+                                modal.style.display = 'none';
+                                document.body.focus();
+                            }
+                        }
+                    });
+
+                    clearBtn.addEventListener('click', clearFilter);
                 }
 
                 document.getElementById('selectionModalTitle').textContent = title;
                 const body = document.getElementById('selectionModalBody');
                 body.innerHTML = '';
+
+                // Reset search state on each open
+                const searchInput = document.getElementById('selectionModalSearch');
+                const clearBtn = document.getElementById('selectionModalClear');
+                if (searchInput) searchInput.value = '';
+                if (clearBtn) clearBtn.style.display = 'none';
 
                 options.forEach(opt => {
                     const btn = document.createElement('button');
@@ -4738,6 +4822,8 @@ v0.9.8 - Last Updated January 1, 2026
                 });
 
                 modal.style.display = 'flex';
+                // Auto-focus search so the user can start typing immediately
+                setTimeout(() => { if (searchInput) searchInput.focus(); }, 30);
             }
 
             showProject() {
