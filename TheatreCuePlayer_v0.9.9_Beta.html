@@ -1040,6 +1040,30 @@ v0.9.9 - Last Updated June 14, 2026
             }
         }
 
+        /* Oversize Transport Controls */
+        #transportControls .btn-lg {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .transport-hint {
+            display: none;
+            font-size: 0.72rem;
+            font-weight: normal;
+            opacity: 0.8;
+            margin-top: 0.35rem;
+            letter-spacing: 0.04em;
+        }
+        #transportControls.oversize .btn-lg {
+            font-size: 2rem;
+            font-weight: 900;
+            padding: 1.4rem 0.5rem;
+            flex-direction: column;
+        }
+        #transportControls.oversize .transport-hint {
+            display: block;
+        }
+
         /* Waveform Editor Styles */
         .waveform-handle {
             transition: background-color 0.2s;
@@ -1478,20 +1502,25 @@ v0.9.9 - Last Updated June 14, 2026
                     </div>
                 </div>
                 <div class="section">
-                    <h3>Show Control</h3>
+                    <h3 style="display:flex; align-items:center; justify-content:space-between;">
+                        <span>Show Control</span>
+                        <button id="transportSizeBtn" onclick="app.ui.toggleOversizeTransport()" class="btn btn-secondary" style="font-size:0.68rem; padding:2px 7px; font-weight:normal;" title="Toggle oversized controls for projection">⬜ Oversize</button>
+                    </h3>
+                    <div id="transportControls">
                     <div class="controls">
-                        <button onclick="goNext()" class="btn btn-primary btn-lg" style="width: 100%;">GO<span
+                        <button onclick="goNext()" class="btn btn-primary btn-lg" style="width: 100%;">GO<span class="transport-hint">Spacebar</span><span
                                 class="help-icon"
                                 onclick="showHelp('GO Button', 'Play the next cue in sequence and advance to the following cue. Keyboard: Spacebar', event)">?</span></button>
                     </div>
                     <div class="controls">
-                        <button onclick="stopAll()" class="btn btn-danger btn-lg" style="flex: 1;">STOP ALL<span
+                        <button onclick="stopAll()" class="btn btn-danger btn-lg" style="flex: 1;">STOP ALL<span class="transport-hint">Esc</span><span
                                 class="help-icon"
                                 onclick="showHelp('STOP ALL', 'Immediately stop all currently playing audio cues. Keyboard: Escape', event)">?</span></button>
-                        <button onclick="fadeAll()" class="btn btn-warning btn-lg" style="flex: 1;">FADE ALL<span
+                        <button onclick="fadeAll()" class="btn btn-warning btn-lg" style="flex: 1;">FADE ALL<span class="transport-hint">Shift+Esc</span><span
                                 class="help-icon"
-                                onclick="showHelp('FADE ALL', 'Fade out all currently playing cues simultaneously over 5 seconds', event)">?</span></button>
+                                onclick="showHelp('FADE ALL', 'Fade out all currently playing cues simultaneously over 5 seconds. Keyboard: Shift+Escape', event)">?</span></button>
                     </div>
+                    </div><!-- end transportControls -->
 
                     <div id="helpWindow" class="help-window">
                         <h4 id="helpTitle">Click any ❓ for help</h4>
@@ -1527,6 +1556,14 @@ v0.9.9 - Last Updated June 14, 2026
                         <div style="margin-bottom: 0.5rem;"><strong style="color: #ffd700;">Esc:</strong> Stop All<span
                                 class="help-icon inline"
                                 onclick="showHelp('Escape - Stop All', 'Emergency stop - immediately stops all playing audio and exits help mode', event)">?</span>
+                        </div>
+                        <div style="margin-bottom: 0.5rem;"><strong style="color: #ffd700;">Shift+Esc:</strong> Fade All<span
+                                class="help-icon inline"
+                                onclick="showHelp('Shift+Escape - Fade All', 'Fade out all currently playing audio over 5 seconds', event)">?</span>
+                        </div>
+                        <div style="margin-bottom: 0.5rem;"><strong style="color: #ffd700;">F:</strong> Fade Most Recent<span
+                                class="help-icon inline"
+                                onclick="showHelp('F - Fade Most Recent', 'Fade out only the most recently started audio cue', event)">?</span>
                         </div>
                         <div style="margin-bottom: 0.5rem;"><strong style="color: #ffd700;">↑/↓:</strong> Navigate
                             Cues<span class="help-icon inline"
@@ -2031,6 +2068,7 @@ v0.9.9 - Last Updated June 14, 2026
                 this.playingCues = new Map(); // Map<cueNumber, Array<Instance>>
                 this.pendingTimeouts = new Map(); // Map<type, Set<timeoutId>>
                 this.delayTimeouts = new Map(); // Map<cueNumber, timeoutId> (For Pre-Wait Delays)
+                this.lastPlayedCueNumber = null;
                 this.stopAllCalled = false;
                 this.FADE_CURVE_EXP = 2;
                 this.vuMeterAnimationId = null;
@@ -2193,6 +2231,7 @@ v0.9.9 - Last Updated June 14, 2026
 
             playAudioBuffer(cue, remainingLoops) {
                 const cueKey = String(cue.cueNumber);
+                this.lastPlayedCueNumber = cueKey;
 
                 // --- SESSION RETRIEVAL ---
                 let session = this.playingCues.get(cueKey);
@@ -2526,6 +2565,31 @@ v0.9.9 - Last Updated June 14, 2026
                 });
             }
 
+            fadeMostRecent() {
+                if (!this.lastPlayedCueNumber) return;
+                const cueKey = String(this.lastPlayedCueNumber);
+                const session = this.playingCues.get(cueKey);
+                if (!session || session.isStopping) return;
+                const now = this.ctx.currentTime;
+                session.isStopping = true;
+                if (session.masterGain) {
+                    const mg = session.masterGain;
+                    mg.gain.cancelScheduledValues(now);
+                    mg.gain.setValueAtTime(mg.gain.value, now);
+                    this.createSCurveFade(mg, mg.gain.value, 0, 5, now);
+                }
+                if (session.instances) {
+                    session.instances.forEach(inst => {
+                        if (inst.gainNode) {
+                            inst.gainNode.gain.cancelScheduledValues(now);
+                            inst.gainNode.gain.setValueAtTime(inst.gainNode.gain.value, now);
+                            this.createSCurveFade(inst.gainNode, inst.gainNode.gain.value, 0, 5, now);
+                        }
+                    });
+                }
+                setTimeout(() => { this.stopCue(cueKey); }, 5000);
+            }
+
             handleContinue(cue) {
                 if (cue.autoContinue) {
                     const delay = (cue.autoContinueDelay || 0) * 1000;
@@ -2625,6 +2689,7 @@ v0.9.9 - Last Updated June 14, 2026
                 this.hotkeyAssignments = new Map();
                 this.folderSources = []; // [{ name: string, keys: Set<string>, handle? }]
                 this.folderHandles = []; // [{ name: string, handle: FileSystemDirectoryHandle }]
+                this.oversizeTransport = false;
             }
 
             loadProject(json) {
@@ -2650,6 +2715,7 @@ v0.9.9 - Last Updated June 14, 2026
                 this.redoStack = [];
                 this.folderSources = (json.folderSources || []).map(s => ({ name: s.name, keys: new Set() }));
                 this.folderHandles = [];
+                this.oversizeTransport = json.oversizeTransport || false;
             }
 
             /**
@@ -2771,7 +2837,8 @@ v0.9.9 - Last Updated June 14, 2026
                     showName: this.showName,
                     numberingMode: this.numberingMode,
                     lastSaved: this.lastSaved,
-                    folderSources: this.folderSources.map(s => ({ name: s.name }))
+                    folderSources: this.folderSources.map(s => ({ name: s.name })),
+                    oversizeTransport: this.oversizeTransport
                 };
             }
 
@@ -3822,6 +3889,11 @@ v0.9.9 - Last Updated June 14, 2026
                 this.injectHelpStyles(); // Inject CSS for popover
                 this.injectSelectionModalStyles(); // Inject CSS for selection modal
 
+                // Restore oversize transport from localStorage (session default; overridden by show file on load)
+                const savedOversize = localStorage.getItem('tcpOversizeTransport') === '1';
+                this.app.state.oversizeTransport = savedOversize;
+                this.applyOversizeTransport(savedOversize);
+
                 // Global Help Handler
                 document.body.addEventListener('click', (e) => {
                     if (!this.helpMode) return;
@@ -4186,6 +4258,15 @@ v0.9.9 - Last Updated June 14, 2026
                             break;
 
 
+                        case 'f':
+                        case 'F': // Fade Most Recent
+                            if (!this.helpMode && !ctrlKey) {
+                                event.preventDefault();
+                                this.app.audio.fadeMostRecent();
+                                this.showTemporaryFeedback('Fade Most Recent 🌊');
+                            }
+                            break;
+
                         case 's':
                         case 'S': // Save
                             if (!this.helpMode && ctrlKey) {
@@ -4371,7 +4452,8 @@ v0.9.9 - Last Updated June 14, 2026
                     cueInput.addEventListener('change', async (e) => {
                         await this.app.state.handleCueFileLoad(e);
                         this.showProject();
-                        this.updateHeaderDisplay(); // <--- This line was missing!
+                        this.updateHeaderDisplay();
+                        this.applyOversizeTransport(this.app.state.oversizeTransport);
                     });
                 }
 
@@ -4398,6 +4480,7 @@ v0.9.9 - Last Updated June 14, 2026
                         await this.app.state.handleShowFolderLoad(e);
                         this.showProject();
                         this.updateHeaderDisplay();
+                        this.applyOversizeTransport(this.app.state.oversizeTransport);
                     });
                 }
             }
@@ -5891,6 +5974,24 @@ v0.9.9 - Last Updated June 14, 2026
             wfVZoomReset() {
                 this.waveform.vZoom = 1.0;
                 this.updateWaveformDisplay();
+            }
+
+            toggleOversizeTransport() {
+                this.app.state.oversizeTransport = !this.app.state.oversizeTransport;
+                localStorage.setItem('tcpOversizeTransport', this.app.state.oversizeTransport ? '1' : '0');
+                this.applyOversizeTransport(this.app.state.oversizeTransport);
+            }
+
+            applyOversizeTransport(isOversize) {
+                const controls = document.getElementById('transportControls');
+                const btn = document.getElementById('transportSizeBtn');
+                if (controls) controls.classList.toggle('oversize', isOversize);
+                if (btn) {
+                    btn.textContent = isOversize ? '🔲 Normal' : '⬜ Oversize';
+                    btn.style.background = isOversize ? '#ffd700' : '';
+                    btn.style.color = isOversize ? '#000' : '';
+                    btn.style.fontWeight = isOversize ? 'bold' : 'normal';
+                }
             }
 
             wfToggleHighContrast() {
