@@ -1605,6 +1605,11 @@ v0.9.8 - Last Updated January 1, 2026
                             Export Project to Zip<span class="help-icon"
                                 onclick="showHelp('Export to Zip', 'Bundles all audio files and your cue list into a single Zip file for easy sharing or assignment submission.', event)">?</span></button>
                     </div>
+                    <div class="controls" style="margin-top: 0.4rem;">
+                        <button onclick="window.consolidateToFolder()" class="btn btn-secondary" style="width: 100%;">📁
+                            Consolidate to Folder<span class="help-icon"
+                                onclick="showHelp('Consolidate to Folder', 'Copies all audio files and the show file into a single folder you choose — no ZIP compression. Useful for moving a show or cleaning up scattered audio sources.', event)">?</span></button>
+                    </div>
 
                     <!-- v0.9.8 Export Options -->
                     <div
@@ -3609,6 +3614,90 @@ v0.9.8 - Last Updated January 1, 2026
                 } catch (e) {
                     console.error("Zip generation error", e);
                     alert("Failed to generate zip file: " + e.message);
+                }
+            }
+
+            async consolidateToFolder() {
+                if (this.cues.length === 0 && this.files.size === 0) {
+                    alert("Project is empty. Nothing to export.");
+                    return;
+                }
+                if (!window.showDirectoryPicker) {
+                    alert("Your browser does not support folder export. Please use Export to ZIP instead.");
+                    return;
+                }
+                const pickerOpts = { mode: 'readwrite' };
+                if (this.folderHandles.length === 1) pickerOpts.startIn = this.folderHandles[0].handle;
+                let dirHandle;
+                try {
+                    dirHandle = await showDirectoryPicker(pickerOpts);
+                } catch (e) {
+                    if (e.name === 'AbortError') return;
+                    alert("Could not open folder picker: " + e.message);
+                    return;
+                }
+                if (window.app && window.app.ui) window.app.ui.showTemporaryFeedback("Copying files… please wait", 10000);
+                const safeName = (this.showName || "Project").replace(/[^a-z0-9]/gi, '_');
+
+                // Collect only files referenced by cues
+                const referencedKeys = new Set();
+                for (const cue of this.cues) {
+                    if (cue.type === 'audio' && cue.file && this.files.has(cue.file)) {
+                        referencedKeys.add(cue.file);
+                    }
+                }
+
+                // Build key → flat filename map; handle basename collisions
+                const keyToFlat = new Map();
+                const usedNames = new Set();
+                for (const key of referencedKeys) {
+                    const base = key.split('/').pop();
+                    const flat = usedNames.has(base) ? key.replace(/\//g, '_') : base;
+                    keyToFlat.set(key, flat);
+                    usedNames.add(flat);
+                }
+
+                let fileCount = 0, failCount = 0;
+                for (const [key, flat] of keyToFlat) {
+                    try {
+                        const fh = await dirHandle.getFileHandle(flat, { create: true });
+                        const w = await fh.createWritable();
+                        await w.write(this.files.get(key));
+                        await w.close();
+                        fileCount++;
+                    } catch (e) { console.error(`Failed to copy "${key}":`, e); failCount++; }
+                }
+
+                // Write JSON with cue.file remapped to flat names
+                const json = this.toJSON();
+                for (const cue of json.cues) {
+                    if (cue.file && keyToFlat.has(cue.file)) cue.file = keyToFlat.get(cue.file);
+                }
+                try {
+                    const fh = await dirHandle.getFileHandle(`${safeName}.json`, { create: true });
+                    const w = await fh.createWritable();
+                    await w.write(JSON.stringify(json, null, 2));
+                    await w.close();
+                } catch (e) { console.error("Failed to write JSON:", e); failCount++; }
+
+                const folderName = dirHandle.name;
+                const failNote = failCount > 0 ? ` (${failCount} failed)` : '';
+                if (window.app && window.app.ui) window.app.ui.showTemporaryFeedback(`Copied to "${folderName}": ${fileCount} files${failNote}`);
+                const useOnly = confirm(`All files have been copied to "${folderName}".\n\nWould you like to remove additional audio folders and use only this folder going forward?`);
+                if (useOnly) {
+                    // Remap in-memory cue references to flat names before switching folder
+                    for (const cue of this.cues) {
+                        if (cue.file && keyToFlat.has(cue.file)) cue.file = keyToFlat.get(cue.file);
+                    }
+                    this.files.clear();
+                    this.folderSources = [];
+                    this.folderHandles = [];
+                    await this.addFolderHandle(dirHandle);
+                    await this.saveFolderHandlesToDB();
+                    if (window.app && window.app.ui) {
+                        window.app.ui.renderCueTable();
+                        window.app.ui.showTemporaryFeedback(`Now using only "${folderName}"`);
+                    }
                 }
             }
 
@@ -6438,6 +6527,8 @@ v0.9.8 - Last Updated January 1, 2026
         };
 
         // Global Shims for HTML Button Connectivity
+        window.consolidateToFolder = () => app.state.consolidateToFolder();
+
         window.exportCSV = async () => {
             if (window.app && window.app.state) {
                 const result = window.app.state.exportCSV();
