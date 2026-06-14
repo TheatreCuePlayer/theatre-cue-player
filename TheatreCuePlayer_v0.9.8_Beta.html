@@ -1425,9 +1425,6 @@ v0.9.8 - Last Updated January 1, 2026
                             onclick="showHelp('Load Cue File', 'Load an existing .json cue list file', event)">?</span></button>
                     <p class="button-description">Load existing cue list (.json) from any location</p>
 
-                    <button onclick="newProject()" class="btn btn-info btn-lg">New Project<span class="help-icon"
-                            onclick="showHelp('New Project', 'Start with an empty cue list', event)">?</span></button>
-                    <p class="button-description">Start with empty cue list and enter Edit Mode</p>
                 </div>
             </div>
 
@@ -1577,8 +1574,10 @@ v0.9.8 - Last Updated January 1, 2026
                 </div>
 
                 <div class="section">
-                    <h3>Project<span class="help-icon inline"
-                            onclick="showHelp('Project', 'Project management and file operations', event)">?</span></h3>
+                    <h3 onclick="var b=document.getElementById('projectSectionBody');var open=b.style.display!=='none';b.style.display=open?'none':'block';this.querySelector('.project-chevron').textContent=open?'▶':'▼';" style="cursor:pointer; user-select:none;">
+                        <span class="project-chevron" style="font-size:0.65rem; opacity:0.55; margin-right:0.3rem;">▼</span>Project<span class="help-icon inline"
+                            onclick="event.stopPropagation(); showHelp('Project', 'Project management and file operations', event)">?</span></h3>
+                    <div id="projectSectionBody">
                     <div class="controls">
                         <button onclick="loadAudioFolder()" class="btn btn-primary">Load Audio Folder<span
                                 class="help-icon"
@@ -1595,8 +1594,6 @@ v0.9.8 - Last Updated January 1, 2026
                                 onclick="showHelp('Manage Folders', 'View all loaded folders, see file counts, and remove folders from the pool', event)">?</span></button>
                     </div>
                     <div class="controls">
-                        <button onclick="newProject()" class="btn btn-success">New Project<span class="help-icon"
-                                onclick="showHelp('New Project', 'Start fresh with empty cue list', event)">?</span></button>
                         <button onclick="showProjectStatus()" class="btn btn-info">View Status<span class="help-icon"
                                 onclick="showHelp('View Status', 'Show project statistics: total cues, ready cues, and available audio files', event)">?</span></button>
                     </div>
@@ -1628,6 +1625,7 @@ v0.9.8 - Last Updated January 1, 2026
                             style="font-size: 0.75rem; flex: 1;">Export PDF<span class="help-icon"
                                 onclick="showHelp('Export PDF', 'Generate a printable PDF cue sheet for stage management', event)">?</span></button>
                     </div>
+                    </div><!-- end projectSectionBody -->
                 </div>
 
             </div>
@@ -1860,9 +1858,7 @@ v0.9.8 - Last Updated January 1, 2026
                     </div>
 
                     <div class="qs-step">
-                        <strong>3. Create:</strong> Click <span class="qs-btn-mimic"
-                            style="background: #17a2b8; color: white;">New Project</span> to start building your cue
-                        list.
+                        <strong>3. Create:</strong> Click <strong>Edit Mode</strong> to start building your cue list. To start a fresh project, reload the page.
                     </div>
 
                     <div class="qs-step">
