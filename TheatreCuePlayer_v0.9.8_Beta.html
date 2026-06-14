@@ -1456,6 +1456,7 @@ v0.9.8 - Last Updated January 1, 2026
             <input type="file" id="folderInput" webkitdirectory multiple style="display: none;">
             <input type="file" id="cueFileInput" accept=".json" style="display: none;">
             <input type="file" id="showFolderInput" webkitdirectory multiple style="display: none;">
+            <input type="file" id="addFolderInput" webkitdirectory multiple style="display: none;">
         </div>
 
         <div id="cueListContainer" class="main-content" style="display: none;">
@@ -1581,9 +1582,17 @@ v0.9.8 - Last Updated January 1, 2026
                     <div class="controls">
                         <button onclick="loadAudioFolder()" class="btn btn-primary">Load Audio Folder<span
                                 class="help-icon"
-                                onclick="showHelp('Load Audio Folder', 'Load audio files from any folder', event)">?</span></button>
+                                onclick="showHelp('Load Audio Folder', 'Select a folder of audio files — replaces the current pool', event)">?</span></button>
                         <button onclick="loadCueFile()" class="btn btn-info">Load Cue File<span class="help-icon"
                                 onclick="showHelp('Load Cue File', 'Load cues from a .json file', event)">?</span></button>
+                    </div>
+                    <div class="controls">
+                        <button onclick="addAudioFolder()" class="btn btn-primary">➕ Add Folder<span
+                                class="help-icon"
+                                onclick="showHelp('Add Folder', 'Add another audio folder to the pool without losing files already loaded', event)">?</span></button>
+                        <button onclick="manageFolders()" class="btn btn-secondary">📁 Folders<span
+                                class="help-icon"
+                                onclick="showHelp('Manage Folders', 'View all loaded folders, see file counts, and remove folders from the pool', event)">?</span></button>
                     </div>
                     <div class="controls">
                         <button onclick="newProject()" class="btn btn-success">New Project<span class="help-icon"
@@ -2612,6 +2621,8 @@ v0.9.8 - Last Updated January 1, 2026
                 this.lastSaved = null;
                 this.isDirty = false;
                 this.hotkeyAssignments = new Map();
+                this.folderSources = []; // [{ name: string, keys: Set<string>, handle? }]
+                this.folderHandles = []; // [{ name: string, handle: FileSystemDirectoryHandle }]
             }
 
             loadProject(json) {
@@ -2635,6 +2646,8 @@ v0.9.8 - Last Updated January 1, 2026
 
                 this.undoStack = [];
                 this.redoStack = [];
+                this.folderSources = (json.folderSources || []).map(s => ({ name: s.name, keys: new Set() }));
+                this.folderHandles = [];
             }
 
             /**
@@ -2755,7 +2768,8 @@ v0.9.8 - Last Updated January 1, 2026
                     hotkeyAssignments: Object.fromEntries(this.hotkeyAssignments || new Map()),
                     showName: this.showName,
                     numberingMode: this.numberingMode,
-                    lastSaved: this.lastSaved
+                    lastSaved: this.lastSaved,
+                    folderSources: this.folderSources.map(s => ({ name: s.name }))
                 };
             }
 
@@ -3227,37 +3241,33 @@ v0.9.8 - Last Updated January 1, 2026
                     const text = await file.text();
                     const json = JSON.parse(text);
 
-                    // PRESERVE EXISTING FILES if loading into a state that already has them.
-                    // The loadProject method likely nukes state, so we need to be careful.
-                    // Let's check loadProject implementation (it usually overwrites this.files).
-                    // We will grab the existing files first.
                     const existingFiles = new Map(this.files);
+                    const existingSources = this.folderSources; // preserve key tracking across load
 
                     this.loadProject(json);
 
-                    // Restore files if the loaded project didn't have any (or we want to prioritize memory)
-                    // If the user did "Load Audio Folder" -> "Load Cue File", we want the "Load Audio Folder" files to stick.
                     if (existingFiles.size > 0) {
-                        // Merge? Or overwrite? 
-                        // If we are loading a cue file, it might assume files are missing.
-                        // We should re-inject the file handles we have in memory.
-                        // If the JSON assumes file paths that match our keys, this handles it.
-                        existingFiles.forEach((val, key) => {
-                            this.files.set(key, val);
-                        });
-
-                        // Re-validate cues against these files
+                        existingFiles.forEach((val, key) => { this.files.set(key, val); });
                         this.cues.forEach(cue => {
                             if (cue.type === 'audio') {
                                 cue.status = this.files.has(cue.file) ? 'ready' : 'missing';
                             }
                         });
-
-                        // Update counter
                         this.audioFilesLoaded = this.files.size;
+                        this.folderSources = existingSources; // keep populated key sets
                     }
 
                     this.currentFileName = file.name;
+
+                    // Try to re-grant previously stored folder handles from IDB
+                    this.tryRestoreFolderHandles().then(restored => {
+                        if (restored.length > 0 && window.app && window.app.ui) {
+                            window.app.ui.showTemporaryFeedback(
+                                `Restored: ${restored.map(r => `"${r.name}" (${r.count} files)`).join(', ')}`
+                            );
+                            window.app.ui.renderCueTable();
+                        }
+                    }).catch(() => {});
                 } catch (e) {
                     console.error(e);
                     alert("Error loading file: " + e.message);
@@ -3267,7 +3277,11 @@ v0.9.8 - Last Updated January 1, 2026
 
             async handleAudioFolderLoad(event) {
                 if (event.target.files.length > 0) {
+                    const folderName = (event.target.files[0].webkitRelativePath || '').split('/')[0] || 'Audio Folder';
                     const count = await this.scanAudioFiles(event.target.files);
+                    // Replace folder source tracking to match the fresh pool
+                    this.folderSources = [{ name: folderName, keys: new Set(this.files.keys()) }];
+                    this.folderHandles = [];
                     alert(`Loaded ${this.audioFilesLoaded} audio files. Connected ${count} cues.`);
                     if (window.app && window.app.ui) window.app.ui.renderCueTable();
                 }
@@ -3290,7 +3304,10 @@ v0.9.8 - Last Updated January 1, 2026
                     }
                 }
 
+                const folderName = (event.target.files[0]?.webkitRelativePath || '').split('/')[0] || 'Show Folder';
                 await this.scanAudioFiles(event.target.files);
+                this.folderSources = [{ name: folderName, keys: new Set(this.files.keys()) }];
+                this.folderHandles = [];
 
                 if (jsonFile) {
                     alert(`Project loaded from folder. ${this.audioFilesLoaded} audio files found.`);
@@ -3298,6 +3315,145 @@ v0.9.8 - Last Updated January 1, 2026
                     alert(`Loaded ${this.audioFilesLoaded} audio files. No project file (.json) found in root.`);
                 }
                 event.target.value = ''; // Reset
+            }
+
+            // --- Multi-Folder Support ---
+
+            async mergeFileList(fileList, folderName) {
+                const newKeys = new Set();
+                Array.from(fileList).forEach(file => {
+                    if (!file.name.toLowerCase().match(/\.(mp3|wav|ogg|m4a|aac|flac|wma)$/)) return;
+                    let filePath = file.webkitRelativePath || file.name;
+                    if (filePath.includes('/')) {
+                        const parts = filePath.split('/');
+                        if (parts.length > 1) filePath = parts.slice(1).join('/');
+                    }
+                    let key = filePath;
+                    if (this.files.has(key)) key = `${folderName}/${filePath}`;
+                    if (!this.files.has(key)) { this.files.set(key, file); newKeys.add(key); }
+                });
+                const existing = this.folderSources.find(s => s.name === folderName);
+                if (existing) { newKeys.forEach(k => existing.keys.add(k)); }
+                else { this.folderSources.push({ name: folderName, keys: newKeys }); }
+                this.audioFilesLoaded = this.files.size;
+                this._reconnectCues();
+                return newKeys.size;
+            }
+
+            async scanHandleRecursive(dirHandle, prefix, result) {
+                for await (const entry of dirHandle.values()) {
+                    const path = prefix ? `${prefix}/${entry.name}` : entry.name;
+                    if (entry.kind === 'file') {
+                        if (entry.name.toLowerCase().match(/\.(mp3|wav|ogg|m4a|aac|flac|wma)$/)) {
+                            result.set(path, await entry.getFile());
+                        }
+                    } else if (entry.kind === 'directory') {
+                        await this.scanHandleRecursive(entry, path, result);
+                    }
+                }
+            }
+
+            async addFolderHandle(dirHandle) {
+                const folderName = dirHandle.name;
+                const scanned = new Map();
+                await this.scanHandleRecursive(dirHandle, '', scanned);
+                const newKeys = new Set();
+                for (const [path, file] of scanned) {
+                    let key = path;
+                    if (this.files.has(key)) key = `${folderName}/${path}`;
+                    if (!this.files.has(key)) { this.files.set(key, file); newKeys.add(key); }
+                }
+                const existing = this.folderSources.find(s => s.name === folderName);
+                if (existing) { existing.handle = dirHandle; newKeys.forEach(k => existing.keys.add(k)); }
+                else { this.folderSources.push({ name: folderName, keys: newKeys, handle: dirHandle }); }
+                if (!this.folderHandles.find(h => h.name === folderName)) {
+                    this.folderHandles.push({ name: folderName, handle: dirHandle });
+                }
+                this.audioFilesLoaded = this.files.size;
+                this._reconnectCues();
+                return newKeys.size;
+            }
+
+            removeFolder(name) {
+                const source = this.folderSources.find(s => s.name === name);
+                if (!source) return;
+                source.keys.forEach(key => this.files.delete(key));
+                this.folderSources = this.folderSources.filter(s => s.name !== name);
+                this.folderHandles = this.folderHandles.filter(h => h.name !== name);
+                this.audioFilesLoaded = this.files.size;
+                this.cues.forEach(cue => {
+                    if (cue.type === 'audio' && cue.file)
+                        cue.status = this.files.has(cue.file) ? 'ready' : 'missing';
+                });
+                this.saveFolderHandlesToDB().catch(() => {});
+                if (window.app && window.app.ui) window.app.ui.renderCueTable();
+            }
+
+            _reconnectCues() {
+                for (const cue of this.cues) {
+                    if (cue.type === 'audio' && cue.file) {
+                        if (this.files.has(cue.file)) {
+                            cue.audioBuffer = null;
+                            cue.status = 'ready';
+                            this.fetchFileMetadata(this.files.get(cue.file)).then(dur => {
+                                if (dur) {
+                                    cue.fileDuration = dur;
+                                    if (window.app && window.app.ui) window.app.ui.renderCueTable();
+                                }
+                            });
+                        } else {
+                            cue.status = 'missing';
+                        }
+                    }
+                }
+            }
+
+            async saveFolderHandlesToDB() {
+                try {
+                    const db = await this._openFolderDB();
+                    const handles = this.folderHandles.map(h => h.handle);
+                    await new Promise((resolve, reject) => {
+                        const tx = db.transaction('handles', 'readwrite');
+                        tx.objectStore('handles').put(handles, this.showName || '__default__');
+                        tx.oncomplete = resolve;
+                        tx.onerror = () => reject(tx.error);
+                    });
+                    db.close();
+                } catch (e) { console.warn('saveFolderHandlesToDB:', e); }
+            }
+
+            async tryRestoreFolderHandles() {
+                const restored = [];
+                try {
+                    const db = await this._openFolderDB();
+                    const handles = await new Promise((resolve, reject) => {
+                        const tx = db.transaction('handles', 'readonly');
+                        const req = tx.objectStore('handles').get(this.showName || '__default__');
+                        req.onsuccess = () => resolve(req.result || []);
+                        req.onerror = () => reject(req.error);
+                    });
+                    db.close();
+                    for (const handle of handles) {
+                        try {
+                            let perm = await handle.queryPermission({ mode: 'read' });
+                            if (perm !== 'granted') perm = await handle.requestPermission({ mode: 'read' });
+                            if (perm === 'granted') {
+                                const count = await this.addFolderHandle(handle);
+                                restored.push({ name: handle.name, count });
+                            }
+                        } catch (e) { console.warn('Could not restore handle for', handle?.name, e); }
+                    }
+                } catch (e) { console.warn('tryRestoreFolderHandles:', e); }
+                return restored;
+            }
+
+            _openFolderDB() {
+                return new Promise((resolve, reject) => {
+                    const req = indexedDB.open('tcpFolderHandles', 1);
+                    req.onupgradeneeded = e => e.target.result.createObjectStore('handles');
+                    req.onsuccess = e => resolve(e.target.result);
+                    req.onerror = () => reject(req.error);
+                });
             }
 
             async exportProjectZip() {
@@ -4829,6 +4985,48 @@ v0.9.8 - Last Updated January 1, 2026
                 setTimeout(() => { if (searchInput) searchInput.focus(); }, 30);
             }
 
+            showManageFoldersModal() {
+                let modal = document.getElementById('manageFoldersModal');
+                if (!modal) {
+                    modal = document.createElement('div');
+                    modal.id = 'manageFoldersModal';
+                    modal.style.cssText = 'display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:10002;align-items:center;justify-content:center;';
+                    document.body.appendChild(modal);
+                }
+                const sources = this.app.state.folderSources;
+                const rows = sources.length === 0
+                    ? '<p style="color:#888;font-size:0.9rem;margin:0.5rem 0;">No folders loaded.</p>'
+                    : sources.map(s => `
+                        <div style="display:flex;justify-content:space-between;align-items:center;background:#333;border:1px solid #555;border-radius:4px;padding:0.5rem 0.8rem;margin-bottom:0.4rem;">
+                            <div>
+                                <div style="color:#fff;font-size:0.9rem;">📁 ${this._escHtml(s.name)}</div>
+                                <div style="color:#888;font-size:0.75rem;">${s.keys.size} file${s.keys.size !== 1 ? 's' : ''}</div>
+                            </div>
+                            <button onclick="app.state.removeFolder(${this._escHtml(JSON.stringify(s.name))});app.ui.showManageFoldersModal();"
+                                style="background:#dc3545;color:#fff;border:none;padding:0.3rem 0.6rem;border-radius:4px;cursor:pointer;font-size:0.8rem;">Remove</button>
+                        </div>`).join('');
+
+                modal.innerHTML = `
+                    <div style="background:#2a2a2a;width:90%;max-width:480px;border-radius:8px;border:2px solid #007bff;padding:1.5rem;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+                            <h3 style="margin:0;color:#ffd700;">📁 Audio Folders</h3>
+                            <button onclick="document.getElementById('manageFoldersModal').style.display='none';"
+                                style="background:#555;color:#fff;border:none;padding:0.35rem 0.7rem;border-radius:4px;cursor:pointer;">✕</button>
+                        </div>
+                        <div style="margin-bottom:1rem;max-height:300px;overflow-y:auto;">${rows}</div>
+                        <button onclick="document.getElementById('manageFoldersModal').style.display='none';window.addAudioFolder();"
+                            class="btn btn-primary" style="width:100%;">➕ Add Folder</button>
+                        <div style="margin-top:0.6rem;font-size:0.75rem;color:#888;text-align:center;">
+                            ${this.app.state.files.size} file${this.app.state.files.size !== 1 ? 's' : ''} in pool
+                        </div>
+                    </div>`;
+                modal.style.display = 'flex';
+            }
+
+            _escHtml(str) {
+                return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+            }
+
             showProject() {
                 document.getElementById('noProject').style.display = 'none';
                 const container = document.getElementById('cueListContainer');
@@ -5829,6 +6027,34 @@ v0.9.8 - Last Updated January 1, 2026
         window.loadAudioFolder = () => document.getElementById('folderInput').click();
         window.loadCueFile = () => document.getElementById('cueFileInput').click();
         window.loadShowFolder = () => document.getElementById('showFolderInput').click();
+
+        window.addAudioFolder = async () => {
+            if (window.showDirectoryPicker) {
+                try {
+                    const handle = await showDirectoryPicker({ mode: 'read' });
+                    const count = await app.state.addFolderHandle(handle);
+                    await app.state.saveFolderHandlesToDB();
+                    app.ui.renderCueTable();
+                    app.ui.showTemporaryFeedback(`Added "${handle.name}": ${count} new file${count !== 1 ? 's' : ''}`);
+                    return;
+                } catch (e) {
+                    if (e.name === 'AbortError') return;
+                    console.warn('showDirectoryPicker failed, falling back to input:', e);
+                }
+            }
+            document.getElementById('addFolderInput').click();
+        };
+
+        window.manageFolders = () => app.ui.showManageFoldersModal();
+
+        document.getElementById('addFolderInput').addEventListener('change', async (e) => {
+            if (!e.target.files.length) return;
+            const folderName = (e.target.files[0].webkitRelativePath || '').split('/')[0] || 'Added Folder';
+            const count = await app.state.mergeFileList(e.target.files, folderName);
+            app.ui.renderCueTable();
+            app.ui.showTemporaryFeedback(`Added "${folderName}": ${count} new file${count !== 1 ? 's' : ''}`);
+            e.target.value = '';
+        });
         window.openWaveformEditor = (id) => app.ui.openWaveform(id);
 
         // File Input Event Shims (Matching inline HTML onchange attributes)
