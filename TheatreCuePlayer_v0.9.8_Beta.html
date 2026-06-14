@@ -1516,9 +1516,11 @@ v0.9.8 - Last Updated January 1, 2026
                 </div>
 
                 <div class="section">
-                    <h3>⌨️ Keyboard Shortcuts<span class="help-icon inline"
-                            onclick="showHelp('Keyboard Shortcuts', 'Essential keyboard controls for fast operation', event)">?</span>
+                    <h3 onclick="var b=document.getElementById('kbShortcutsBody');var open=b.style.display!=='none';b.style.display=open?'none':'block';this.querySelector('.kb-chevron').textContent=open?'▶':'▼';" style="cursor:pointer; user-select:none;">
+                        <span class="kb-chevron" style="font-size:0.65rem; opacity:0.55; margin-right:0.3rem;">▶</span>⌨️ Keyboard Shortcuts<span class="help-icon inline"
+                            onclick="event.stopPropagation(); showHelp('Keyboard Shortcuts', 'Essential keyboard controls for fast operation', event)">?</span>
                     </h3>
+                    <div id="kbShortcutsBody" style="display:none;">
                     <div style="font-size: 0.8rem; line-height: 1.4; color: #ccc;">
                         <div style="margin-bottom: 0.5rem;"><strong style="color: #ffd700;">Spacebar:</strong> GO<span
                                 class="help-icon inline"
@@ -1570,6 +1572,7 @@ v0.9.8 - Last Updated January 1, 2026
                             style="cursor: pointer; color: #17a2b8; text-decoration: underline;">📋 View Hotkey
                             Assignments</div>
                     </div>
+                    </div><!-- end kbShortcutsBody -->
                 </div>
 
                 <div class="section">
