@@ -3182,9 +3182,24 @@ v0.9.9 - Last Updated June 14, 2026
                 let currentVal = settings.mode === 'alpha' ? this.fromBase26(settings.startVal) : parseFloat(settings.startVal);
                 const step = settings.increment || 1;
 
+                // Build old→new mapping before applying any changes
+                const renumberMap = new Map();
+                let mapVal = currentVal;
                 targets.forEach(cue => {
-                    cue.cueNumber = this.formatCueNumber(currentVal, settings.mode);
-                    currentVal += step;
+                    renumberMap.set(cue.cueNumber, this.formatCueNumber(mapVal, settings.mode));
+                    mapVal += step;
+                });
+
+                // Apply new cue numbers
+                targets.forEach(cue => {
+                    cue.cueNumber = renumberMap.get(cue.cueNumber);
+                });
+
+                // Update fade cue targets to reflect renamed cues
+                this.cues.forEach(cue => {
+                    if (cue.type === 'fade' && renumberMap.has(cue.target)) {
+                        cue.target = renumberMap.get(cue.target);
+                    }
                 });
 
                 this.numberingMode = settings.mode;
@@ -3232,6 +3247,13 @@ v0.9.9 - Last Updated June 14, 2026
                     // Validated - Proceed with Renumbering
                     this.saveUndoState(`Renumber Cue ${cueNumber} to ${newValue}`);
                     cue.cueNumber = newValue;
+
+                    // Update any fade cues targeting the old cue number
+                    this.cues.forEach(c => {
+                        if (c.type === 'fade' && c.target === cueNumber) {
+                            c.target = newValue;
+                        }
+                    });
 
                     // Force UI Refresh
                     if (window.app && window.app.ui) window.app.ui.renderCueTable();
