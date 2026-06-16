@@ -3620,21 +3620,28 @@ v0.9.9 - Last Updated June 14, 2026
                     console.error("Failed to add cue sheets to zip", e);
                 }
 
-                // 4. Add Audio Files
+                // 4. Add Audio Files (only those referenced by cues)
                 let fileCount = 0;
                 let failCount = 0;
 
-                // Show temporary "Zipping..." feedback?
+                const referencedKeys = new Set();
+                for (const cue of this.cues) {
+                    if (cue.type === 'audio' && cue.file && this.files.has(cue.file)) {
+                        referencedKeys.add(cue.file);
+                    }
+                }
+
                 if (window.app && window.app.ui) window.app.ui.showTemporaryFeedback("Compressing Project... Please Wait", 5000);
 
-                for (const [path, fileObj] of this.files) {
+                for (const key of referencedKeys) {
+                    const fileObj = this.files.get(key);
                     try {
                         const fileDate = new Date(fileObj.lastModified || now.getTime());
                         const correctedFileDate = new Date(fileDate.getTime() - offset);
-                        zip.file(path, fileObj, { date: correctedFileDate });
+                        zip.file(key, fileObj, { date: correctedFileDate });
                         fileCount++;
                     } catch (e) {
-                        console.error(`Failed to add ${path} to zip`, e);
+                        console.error(`Failed to add ${key} to zip`, e);
                         failCount++;
                     }
                 }
