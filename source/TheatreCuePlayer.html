@@ -3,7 +3,7 @@ Theatre Cue Player
 
 Developed by Kevin Patrick
 
-v1.0.0 - Last Updated July 16, 2026
+v1.1 - Last Updated July 16, 2026
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -11,7 +11,7 @@ v1.0.0 - Last Updated July 16, 2026
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Theatre Cue Player v1.0.0</title>
+    <title>Theatre Cue Player v1.1</title>
     <!-- BUILD:LIBRARIES -->
     <style>
         * {
@@ -1445,6 +1445,11 @@ v1.0.0 - Last Updated July 16, 2026
                             onclick="showHelp('Load Cue File', 'Load an existing .json cue list file', event)">?</span></button>
                     <p class="button-description">Load existing cue list (.json) from any location</p>
 
+                    <button onclick="loadProjectZip()" class="btn btn-secondary btn-lg">Load Project Zip<span
+                            class="help-icon"
+                            onclick="showHelp('Load Project Zip', 'Open a .zip made by Export Project to Zip. It contains the cue list and its audio together, so this is the only step needed - you do not also have to load an audio folder.', event)">?</span></button>
+                    <p class="button-description">Open a whole project (.zip) - cue list and audio together</p>
+
                 </div>
             </div>
 
@@ -1452,8 +1457,8 @@ v1.0.0 - Last Updated July 16, 2026
                 <p><strong>Designed by:</strong> Kevin Patrick<br>
                     <a href="mailto:TheatreCuePlayer@gmail.com" style="color: #007bff;">TheatreCuePlayer@gmail.com</a>
                 </p>
-                <p><strong>Refactored by:</strong> Google Gemini 3 Pro</p>
-                <p><strong>Version:</strong> 1.0.0 | <strong>Last Update:</strong> July 16, 2026</p>
+                <p><strong>Coding Assisted by:</strong> Google's Gemini 3 Pro and Anthropic's Claude Code</p>
+                <p><strong>Version:</strong> 1.1 | <strong>Last Update:</strong> July 16, 2026</p>
 
                 <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #444;">
                     <p style="font-size: 0.9rem; color: #ffd700; margin-bottom: 0.5rem;">
@@ -1477,6 +1482,7 @@ v1.0.0 - Last Updated July 16, 2026
 
             <input type="file" id="folderInput" webkitdirectory multiple style="display: none;">
             <input type="file" id="cueFileInput" accept=".json" style="display: none;">
+            <input type="file" id="projectZipInput" accept=".zip" style="display: none;">
             <input type="file" id="showFolderInput" webkitdirectory multiple style="display: none;">
             <input type="file" id="addFolderInput" webkitdirectory multiple style="display: none;">
         </div>
@@ -1636,6 +1642,11 @@ v1.0.0 - Last Updated July 16, 2026
                                 onclick="showHelp('View Status', 'Show project statistics: total cues, ready cues, and available audio files', event)">?</span></button>
                     </div>
                     <div class="controls" style="margin-top: 0.6rem;">
+                        <button onclick="loadProjectZip()" class="btn btn-info" style="width: 100%;">📂
+                            Load Project Zip<span class="help-icon"
+                                onclick="showHelp('Load Project Zip', 'Opens a .zip made by Export Project to Zip, restoring the cue list and its audio in one step. This replaces the project you have open now.', event)">?</span></button>
+                    </div>
+                    <div class="controls" style="margin-top: 0.4rem;">
                         <button onclick="app.state.exportProjectZip()" class="btn btn-warning" style="width: 100%;">📦
                             Export Project to Zip<span class="help-icon"
                                 onclick="showHelp('Export to Zip', 'Bundles all audio files and your cue list into a single Zip file for easy sharing or assignment submission.', event)">?</span></button>
@@ -3387,6 +3398,102 @@ v1.0.0 - Last Updated July 16, 2026
                 event.target.value = ''; // Reset
             }
 
+            /**
+             * Load a whole project from a .zip made by exportProjectZip().
+             *
+             * The export writes each audio file under the exact name its cue points at
+             * (see exportProjectZip), so entry names map straight back onto cue.file and
+             * nothing has to be guessed. Everything is read out of the zip in memory --
+             * no network, no temp files.
+             */
+            async handleProjectZipLoad(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                event.target.value = ''; // Reset early so picking the same zip twice still fires
+
+                if (typeof JSZip === 'undefined') {
+                    alert("Zip library did not load. Please reload the page and try again.");
+                    return;
+                }
+
+                if (this.isDirty && !confirm("You have unsaved changes. Opening a project Zip will replace them. Continue?")) {
+                    return;
+                }
+
+                const AUDIO_RE = /\.(mp3|wav|ogg|m4a|aac|flac|wma)$/i;
+
+                try {
+                    if (window.app && window.app.ui) window.app.ui.showTemporaryFeedback("Opening Project Zip... Please Wait", 5000);
+
+                    let zip;
+                    try {
+                        zip = await JSZip.loadAsync(file);
+                    } catch (e) {
+                        // JSZip's own message here is developer jargon with a documentation
+                        // link in it. Neither belongs in front of a student.
+                        console.error("JSZip could not read the file", e);
+                        throw new Error(`"${file.name}" is not a Zip file this app can read. Pick a .zip made by Export Project to Zip.`);
+                    }
+                    const entries = Object.values(zip.files).filter(e => !e.dir);
+
+                    // The cue list. Zips from this app hold exactly one .json; the CSV and
+                    // PDF cue sheets are also in there and are ignored on the way back in.
+                    const jsonEntry = entries.find(e => e.name.toLowerCase().endsWith('.json'));
+                    if (!jsonEntry) {
+                        throw new Error("This Zip has no cue list (.json) in it, so there is no project to open. If you meant to load loose audio, use Load Audio Folder instead.");
+                    }
+
+                    const json = JSON.parse(await jsonEntry.async('string'));
+                    this.loadProject(json); // Throws on a bad format before anything is replaced
+
+                    // Audio, keyed by the zip's own paths.
+                    this.files = new Map();
+                    for (const entry of entries) {
+                        if (!AUDIO_RE.test(entry.name)) continue;
+                        const blob = await entry.async('blob');
+                        const shortName = entry.name.split('/').pop();
+                        this.files.set(entry.name, new File([blob], shortName, {
+                            type: blob.type,
+                            lastModified: entry.date ? entry.date.getTime() : Date.now()
+                        }));
+                    }
+
+                    // Zips we wrote match exactly. A zip rebuilt by hand -- say a student
+                    // unzipped it and used "Send to > Compressed folder" on the folder --
+                    // nests every entry one level deeper, so cue.file no longer matches the
+                    // path. Fall back to matching on file name alone before giving up, and
+                    // re-key rather than aliasing so the file is not counted twice.
+                    for (const cue of this.cues) {
+                        if (cue.type !== 'audio' || !cue.file || this.files.has(cue.file)) continue;
+                        const wanted = cue.file.split('/').pop().toLowerCase();
+                        for (const [path, f] of this.files) {
+                            if (path.split('/').pop().toLowerCase() === wanted) {
+                                this.files.set(cue.file, f);
+                                this.files.delete(path);
+                                break;
+                            }
+                        }
+                    }
+
+                    this.audioFilesLoaded = this.files.size;
+                    this.folderSources = [{ name: file.name, keys: new Set(this.files.keys()) }];
+                    this.folderHandles = []; // Nothing on disk to re-grant: this came from a zip
+                    this.currentFileName = jsonEntry.name;
+                    this._reconnectCues();
+
+                    const missing = this.cues.filter(c => c.type === 'audio' && c.status === 'missing').length;
+                    const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+                    alert(missing === 0
+                        ? `Project loaded from Zip. ${plural(this.audioFilesLoaded, 'audio file')}, ${plural(this.cues.length, 'cue')}.`
+                        : `Project loaded from Zip, but ${plural(missing, 'cue')} could not find ${missing === 1 ? 'its' : 'their'} audio. Those rows are marked Missing. Use Load Audio Folder to add the missing files.`);
+
+                    if (window.app && window.app.ui) window.app.ui.renderCueTable();
+                } catch (e) {
+                    console.error("Project Zip load failed", e);
+                    alert("Could not open this Zip: " + e.message);
+                }
+            }
+
             async handleAudioFolderLoad(event) {
                 if (event.target.files.length > 0) {
                     const folderName = (event.target.files[0].webkitRelativePath || '').split('/')[0] || 'Audio Folder';
@@ -4501,6 +4608,17 @@ v1.0.0 - Last Updated July 16, 2026
                 if (cueInput) {
                     cueInput.addEventListener('change', async (e) => {
                         await this.app.state.handleCueFileLoad(e);
+                        this.showProject();
+                        this.updateHeaderDisplay();
+                        this.applyOversizeTransport(this.app.state.oversizeTransport);
+                    });
+                }
+
+                // 2b. Project Zip Input
+                const zipInput = document.getElementById('projectZipInput');
+                if (zipInput) {
+                    zipInput.addEventListener('change', async (e) => {
+                        await this.app.state.handleProjectZipLoad(e);
                         this.showProject();
                         this.updateHeaderDisplay();
                         this.applyOversizeTransport(this.app.state.oversizeTransport);
@@ -6317,6 +6435,7 @@ v1.0.0 - Last Updated July 16, 2026
 
         window.loadAudioFolder = () => document.getElementById('folderInput').click();
         window.loadCueFile = () => document.getElementById('cueFileInput').click();
+        window.loadProjectZip = () => document.getElementById('projectZipInput').click();
         window.loadShowFolder = () => document.getElementById('showFolderInput').click();
 
         window.addAudioFolder = async () => {
