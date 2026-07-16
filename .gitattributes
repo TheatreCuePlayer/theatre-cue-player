@@ -1,0 +1,9 @@
+# The v1.0.0 build has the export libraries (jszip, FileSaver, jsPDF, jspdf-autotable)
+# vendored inline as minified source, so the file is byte-sensitive in a way the older
+# builds were not. core.autocrlf is on for this repo, which would rewrite the newlines
+# inside those minified payloads on checkout — a stray \r inside a JS string literal is
+# a data change, not a formatting one, and it would land in generated PDFs.
+#
+# -text disables all newline translation, so what is committed, what Netlify deploys,
+# and what was verified in the browser are the same bytes.
+TheatreCuePlayer_v1.0.0.html -text
