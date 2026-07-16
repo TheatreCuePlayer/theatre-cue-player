@@ -2239,13 +2239,17 @@ v0.9.9_Echo - Last Updated July 16, 2026
                     return;
                 }
 
+                // Claim "most recent" once per GO, here rather than in playAudioBuffer:
+                // that function re-runs for every loop iteration, so a looping cue used to
+                // steal Fade Most Recent (F) back from any cue started after it. Fade cues
+                // return earlier in this function, so only audio cues can be the target.
+                this.lastPlayedCueNumber = String(cue.cueNumber);
                 this.playAudioBuffer(cue);
             }
 
 
             playAudioBuffer(cue, remainingLoops) {
                 const cueKey = String(cue.cueNumber);
-                this.lastPlayedCueNumber = cueKey;
 
                 // --- SESSION RETRIEVAL ---
                 let session = this.playingCues.get(cueKey);
