@@ -3151,6 +3151,17 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
             }
         }
 
+        /**
+         * The audio formats a browser can actually decode and play.
+         *
+         * Deliberately one list, used by every place that picks audio out of a folder or
+         * a Zip. It used to be four copies of the same regex, which is how .wma sat in
+         * here: the scanner accepted it, the cue went green, and pressing GO produced
+         * silence, because Chrome cannot decode WMA. A file this app cannot play must
+         * never be offered as though it can be.
+         */
+        const PLAYABLE_AUDIO_RE = /\.(mp3|wav|ogg|m4a|aac|flac)$/i;
+
         class ProjectState {
             constructor() {
                 this.cues = [];
@@ -3342,7 +3353,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
                         if (parts.length > 1) filePath = parts.slice(1).join('/');
                     }
 
-                    const isAudio = file.name.toLowerCase().match(/\.(mp3|wav|ogg|m4a|aac|flac|wma)$/);
+                    const isAudio = PLAYABLE_AUDIO_RE.test(file.name);
                     if (isAudio) {
                         this.files.set(filePath, file);
                         this.audioFilesLoaded++;
@@ -3902,8 +3913,6 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
                     return;
                 }
 
-                const AUDIO_RE = /\.(mp3|wav|ogg|m4a|aac|flac|wma)$/i;
-
                 try {
                     if (window.app && window.app.ui) window.app.ui.showTemporaryFeedback("Opening Zip... Please Wait", 5000);
 
@@ -3918,7 +3927,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
                     }
 
                     const entries = Object.values(zip.files).filter(e => !e.dir);
-                    const audioEntries = entries.filter(e => AUDIO_RE.test(e.name));
+                    const audioEntries = entries.filter(e => PLAYABLE_AUDIO_RE.test(e.name));
                     // Zips from this app hold exactly one .json; the CSV and PDF cue sheets
                     // are also in there and are ignored on the way back in.
                     const jsonEntry = entries.find(e => e.name.toLowerCase().endsWith('.json'));
@@ -4046,7 +4055,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
             async mergeFileList(fileList, folderName) {
                 const newKeys = new Set();
                 Array.from(fileList).forEach(file => {
-                    if (!file.name.toLowerCase().match(/\.(mp3|wav|ogg|m4a|aac|flac|wma)$/)) return;
+                    if (!PLAYABLE_AUDIO_RE.test(file.name)) return;
                     let filePath = file.webkitRelativePath || file.name;
                     if (filePath.includes('/')) {
                         const parts = filePath.split('/');
@@ -4068,7 +4077,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
                 for await (const entry of dirHandle.values()) {
                     const path = prefix ? `${prefix}/${entry.name}` : entry.name;
                     if (entry.kind === 'file') {
-                        if (entry.name.toLowerCase().match(/\.(mp3|wav|ogg|m4a|aac|flac|wma)$/)) {
+                        if (PLAYABLE_AUDIO_RE.test(entry.name)) {
                             result.set(path, await entry.getFile());
                         }
                     } else if (entry.kind === 'directory') {
