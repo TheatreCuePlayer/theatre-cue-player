@@ -4017,7 +4017,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
 
                 // 2. Load Libraries
                 if (typeof JSZip === 'undefined' || typeof saveAs === 'undefined') {
-                    alert("Export libraries (JSZip/FileSaver) not loaded. Please check internet connection.");
+                    alert("Export libraries did not load. Please reload the page and try again.");
                     return;
                 }
 
@@ -4284,7 +4284,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var r,n,i,a,
              */
             generatePDFBlob() {
                 if (!window.jspdf) {
-                    alert("PDF Library not loaded. Check internet connection.");
+                    alert("PDF library did not load. Please reload the page and try again.");
                     return null;
                 }
                 const { jsPDF } = window.jspdf;
