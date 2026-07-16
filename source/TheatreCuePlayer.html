@@ -1779,9 +1779,15 @@ v1.1 - Last Updated July 16, 2026
 
                 <h3>File Management</h3>
                 <ul>
+                    <li><strong>Load Show Folder:</strong> Select a folder holding both your sound files and your
+                        <code>.json</code> cue list. Opens everything at once.</li>
                     <li><strong>Load Audio Folder:</strong> Select the folder on your computer that contains all your
                         sound files. This grants the app permission to play them.</li>
                     <li><strong>Load Cue File:</strong> Open a previously saved <code>.json</code> cue list.</li>
+                    <li><strong>Load Project Zip:</strong> Open a Show Package (Zip) made by Export Project to Zip. The
+                        cue list and its audio open together, so you do not need to load an audio folder as well. If the
+                        Zip holds no cue list, you are offered the option to add its audio files to your project
+                        instead.</li>
                     <li><strong>Save Cue File:</strong> Saves your current work. Use "Save As" to create backups.</li>
                     <li><strong>Export Project:</strong> Create Zip packages or visual Cue Sheets (PDF/CSV).</li>
                 </ul>
@@ -1904,6 +1910,12 @@ v1.1 - Last Updated July 16, 2026
                         <strong>2. Connect:</strong> Click <span class="qs-btn-mimic"
                             style="background: #007bff; color: white;">Load Audio Folder</span> and select that main
                         folder. This gives the browser permission to play your files.
+                        <div
+                            style="margin-top: 5px; margin-left: 1.5rem; font-size: 0.95em; color: #ccc; border-left: 3px solid #17a2b8; padding-left: 10px; background: rgba(23, 162, 184, 0.1); padding: 5px 10px;">
+                            <strong>Sent a Zip?</strong> Click <span class="qs-btn-mimic"
+                                style="background: #6c757d; color: white;">Load Project Zip</span> instead and skip to
+                            step 5. The cue list and all of its audio open together.
+                        </div>
                     </div>
 
                     <div class="qs-step">
@@ -3789,14 +3801,16 @@ v1.1 - Last Updated July 16, 2026
                 // Use try-catch to allow element to be missing safely during tests or if UI not updated yet
                 const includeCueSheets = document.getElementById('includeCueSheetsZip') ? document.getElementById('includeCueSheetsZip').checked : false;
 
-                try {
-                    const csvExport = this.exportCSV();
-                    if (csvExport) zip.file(csvExport.fileName, csvExport.blob, { date: correctedNow });
+                if (includeCueSheets) {
+                    try {
+                        const csvExport = this.exportCSV();
+                        if (csvExport) zip.file(csvExport.fileName, csvExport.blob, { date: correctedNow });
 
-                    const pdfBlob = this.generatePDFBlob();
-                    if (pdfBlob) zip.file(`${safeName}_CueSheet.pdf`, pdfBlob, { date: correctedNow });
-                } catch (e) {
-                    console.error("Failed to add cue sheets to zip", e);
+                        const pdfBlob = this.generatePDFBlob();
+                        if (pdfBlob) zip.file(`${safeName}_CueSheet.pdf`, pdfBlob, { date: correctedNow });
+                    } catch (e) {
+                        console.error("Failed to add cue sheets to zip", e);
+                    }
                 }
 
                 // 4. Add Audio Files (only those referenced by cues)
