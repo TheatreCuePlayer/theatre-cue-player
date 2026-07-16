@@ -1,0 +1,11 @@
+# Old v0.9.9 build URLs -> the current build.
+# Beta was the published app link for the whole v0.9.9 run and Delta was live
+# briefly, so both are kept working for anyone who bookmarked them directly.
+# 302 (not 301) on purpose: these are "whatever is current" aliases, and a 301
+# would be cached permanently by browsers, making the next build swap unfixable
+# for anyone who had followed the old link.
+
+/theatrecueplayer_v0.9.9_beta       /theatrecueplayer_v0.9.9_echo   302
+/theatrecueplayer_v0.9.9_delta      /theatrecueplayer_v0.9.9_echo   302
+/TheatreCuePlayer_v0.9.9_Beta.html  /theatrecueplayer_v0.9.9_echo   302
+/TheatreCuePlayer_v0.9.9_Delta.html /theatrecueplayer_v0.9.9_echo   302
