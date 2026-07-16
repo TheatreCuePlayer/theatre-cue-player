@@ -1447,8 +1447,8 @@ v1.1 - Last Updated July 16, 2026
 
                     <button onclick="loadProjectZip()" class="btn btn-secondary btn-lg">Load Project Zip<span
                             class="help-icon"
-                            onclick="showHelp('Load Project Zip', 'Open a .zip made by Export Project to Zip. It contains the cue list and its audio together, so this is the only step needed - you do not also have to load an audio folder.', event)">?</span></button>
-                    <p class="button-description">Open a whole project (.zip) - cue list and audio together</p>
+                            onclick="showHelp('Load Project Zip', 'Open a .zip made by Export Project to Zip. It holds the cue list and its audio together, so this is the only step needed - you do not also have to load an audio folder. If the Zip has no cue list in it, you will be offered the option to add its audio files to your project instead.', event)">?</span></button>
+                    <p class="button-description">Open a whole project (.zip), or add audio from any Zip</p>
 
                 </div>
             </div>
@@ -1644,7 +1644,7 @@ v1.1 - Last Updated July 16, 2026
                     <div class="controls" style="margin-top: 0.6rem;">
                         <button onclick="loadProjectZip()" class="btn btn-info" style="width: 100%;">📂
                             Load Project Zip<span class="help-icon"
-                                onclick="showHelp('Load Project Zip', 'Opens a .zip made by Export Project to Zip, restoring the cue list and its audio in one step. This replaces the project you have open now.', event)">?</span></button>
+                                onclick="showHelp('Load Project Zip', 'Opens a .zip made by Export Project to Zip, restoring the cue list and its audio in one step. This replaces the project you have open now. If the Zip has no cue list in it, you will be offered the option to add its audio files to your project instead, which changes nothing else.', event)">?</span></button>
                     </div>
                     <div class="controls" style="margin-top: 0.4rem;">
                         <button onclick="app.state.exportProjectZip()" class="btn btn-warning" style="width: 100%;">📦
@@ -3398,6 +3398,39 @@ v1.1 - Last Updated July 16, 2026
                 event.target.value = ''; // Reset
             }
 
+            _pluralCount(n, word) {
+                return `${n} ${word}${n === 1 ? '' : 's'}`;
+            }
+
+            async _fileFromZipEntry(entry) {
+                const blob = await entry.async('blob');
+                return new File([blob], entry.name.split('/').pop(), {
+                    type: blob.type,
+                    lastModified: entry.date ? entry.date.getTime() : Date.now()
+                });
+            }
+
+            /**
+             * Zips we wrote key audio by the exact name the cue points at. A zip rebuilt
+             * by hand -- unzip, then "Send to > Compressed folder" on the folder -- nests
+             * every entry one level deeper, so the name no longer matches. Fall back to
+             * matching on file name alone, re-keying rather than aliasing so the same file
+             * is not counted twice.
+             */
+            _connectCuesByFileName() {
+                for (const cue of this.cues) {
+                    if (cue.type !== 'audio' || !cue.file || this.files.has(cue.file)) continue;
+                    const wanted = cue.file.split('/').pop().toLowerCase();
+                    for (const [path, f] of this.files) {
+                        if (path.split('/').pop().toLowerCase() === wanted) {
+                            this.files.set(cue.file, f);
+                            this.files.delete(path);
+                            break;
+                        }
+                    }
+                }
+            }
+
             /**
              * Load a whole project from a .zip made by exportProjectZip().
              *
@@ -3405,6 +3438,10 @@ v1.1 - Last Updated July 16, 2026
              * (see exportProjectZip), so entry names map straight back onto cue.file and
              * nothing has to be guessed. Everything is read out of the zip in memory --
              * no network, no temp files.
+             *
+             * A zip with no cue list in it is not really an error: it is almost certainly
+             * a pile of sound effects. Offer to add the audio rather than refusing and
+             * sending the student off to find a different button.
              */
             async handleProjectZipLoad(event) {
                 const file = event.target.files[0];
@@ -3416,14 +3453,10 @@ v1.1 - Last Updated July 16, 2026
                     return;
                 }
 
-                if (this.isDirty && !confirm("You have unsaved changes. Opening a project Zip will replace them. Continue?")) {
-                    return;
-                }
-
                 const AUDIO_RE = /\.(mp3|wav|ogg|m4a|aac|flac|wma)$/i;
 
                 try {
-                    if (window.app && window.app.ui) window.app.ui.showTemporaryFeedback("Opening Project Zip... Please Wait", 5000);
+                    if (window.app && window.app.ui) window.app.ui.showTemporaryFeedback("Opening Zip... Please Wait", 5000);
 
                     let zip;
                     try {
@@ -3434,46 +3467,29 @@ v1.1 - Last Updated July 16, 2026
                         console.error("JSZip could not read the file", e);
                         throw new Error(`"${file.name}" is not a Zip file this app can read. Pick a .zip made by Export Project to Zip.`);
                     }
-                    const entries = Object.values(zip.files).filter(e => !e.dir);
 
-                    // The cue list. Zips from this app hold exactly one .json; the CSV and
-                    // PDF cue sheets are also in there and are ignored on the way back in.
+                    const entries = Object.values(zip.files).filter(e => !e.dir);
+                    const audioEntries = entries.filter(e => AUDIO_RE.test(e.name));
+                    // Zips from this app hold exactly one .json; the CSV and PDF cue sheets
+                    // are also in there and are ignored on the way back in.
                     const jsonEntry = entries.find(e => e.name.toLowerCase().endsWith('.json'));
+
                     if (!jsonEntry) {
-                        throw new Error("This Zip has no cue list (.json) in it, so there is no project to open. If you meant to load loose audio, use Load Audio Folder instead.");
+                        await this._addAudioOnlyZip(file, audioEntries);
+                        return;
                     }
+
+                    // Only warn about losing work once we know we are really replacing it.
+                    if (this.isDirty && !confirm("You have unsaved changes. Opening a project Zip will replace them. Continue?")) return;
 
                     const json = JSON.parse(await jsonEntry.async('string'));
                     this.loadProject(json); // Throws on a bad format before anything is replaced
 
-                    // Audio, keyed by the zip's own paths.
                     this.files = new Map();
-                    for (const entry of entries) {
-                        if (!AUDIO_RE.test(entry.name)) continue;
-                        const blob = await entry.async('blob');
-                        const shortName = entry.name.split('/').pop();
-                        this.files.set(entry.name, new File([blob], shortName, {
-                            type: blob.type,
-                            lastModified: entry.date ? entry.date.getTime() : Date.now()
-                        }));
+                    for (const entry of audioEntries) {
+                        this.files.set(entry.name, await this._fileFromZipEntry(entry));
                     }
-
-                    // Zips we wrote match exactly. A zip rebuilt by hand -- say a student
-                    // unzipped it and used "Send to > Compressed folder" on the folder --
-                    // nests every entry one level deeper, so cue.file no longer matches the
-                    // path. Fall back to matching on file name alone before giving up, and
-                    // re-key rather than aliasing so the file is not counted twice.
-                    for (const cue of this.cues) {
-                        if (cue.type !== 'audio' || !cue.file || this.files.has(cue.file)) continue;
-                        const wanted = cue.file.split('/').pop().toLowerCase();
-                        for (const [path, f] of this.files) {
-                            if (path.split('/').pop().toLowerCase() === wanted) {
-                                this.files.set(cue.file, f);
-                                this.files.delete(path);
-                                break;
-                            }
-                        }
-                    }
+                    this._connectCuesByFileName();
 
                     this.audioFilesLoaded = this.files.size;
                     this.folderSources = [{ name: file.name, keys: new Set(this.files.keys()) }];
@@ -3482,16 +3498,56 @@ v1.1 - Last Updated July 16, 2026
                     this._reconnectCues();
 
                     const missing = this.cues.filter(c => c.type === 'audio' && c.status === 'missing').length;
-                    const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
                     alert(missing === 0
-                        ? `Project loaded from Zip. ${plural(this.audioFilesLoaded, 'audio file')}, ${plural(this.cues.length, 'cue')}.`
-                        : `Project loaded from Zip, but ${plural(missing, 'cue')} could not find ${missing === 1 ? 'its' : 'their'} audio. Those rows are marked Missing. Use Load Audio Folder to add the missing files.`);
+                        ? `Project loaded from Zip. ${this._pluralCount(this.audioFilesLoaded, 'audio file')}, ${this._pluralCount(this.cues.length, 'cue')}.`
+                        : `Project loaded from Zip, but ${this._pluralCount(missing, 'cue')} could not find ${missing === 1 ? 'its' : 'their'} audio. Those rows are marked Missing. Use Load Audio Folder to add the missing files.`);
 
                     if (window.app && window.app.ui) window.app.ui.renderCueTable();
                 } catch (e) {
                     console.error("Project Zip load failed", e);
                     alert("Could not open this Zip: " + e.message);
                 }
+            }
+
+            /**
+             * A zip with audio but no cue list. Adds the audio to whatever is already
+             * loaded rather than replacing it: a student who does this with a show open
+             * should not lose their audio and find every cue suddenly Missing.
+             */
+            async _addAudioOnlyZip(file, audioEntries) {
+                if (audioEntries.length === 0) {
+                    throw new Error(`"${file.name}" has no cue list (.json) and no audio files in it, so there is nothing to open.`);
+                }
+
+                const proceed = confirm(
+                    `"${file.name}" has no cue list (.json) in it, so there is no project to open.\n\n` +
+                    `It does contain ${this._pluralCount(audioEntries.length, 'audio file')}. ` +
+                    `Add ${audioEntries.length === 1 ? 'it' : 'them'} to your audio instead?`
+                );
+                if (!proceed) return;
+
+                const readyBefore = this.cues.filter(c => c.type === 'audio' && c.status === 'ready').length;
+
+                const newKeys = new Set();
+                for (const entry of audioEntries) {
+                    // Same collision rule as adding a folder: keep both, qualify the newcomer.
+                    let key = entry.name;
+                    if (this.files.has(key)) key = `${file.name}/${entry.name}`;
+                    if (this.files.has(key)) continue;
+                    this.files.set(key, await this._fileFromZipEntry(entry));
+                    newKeys.add(key);
+                }
+                this._connectCuesByFileName();
+
+                this.audioFilesLoaded = this.files.size;
+                const existing = this.folderSources.find(s => s.name === file.name);
+                if (existing) newKeys.forEach(k => existing.keys.add(k));
+                else this.folderSources.push({ name: file.name, keys: newKeys });
+                this._reconnectCues();
+
+                const connected = this.cues.filter(c => c.type === 'audio' && c.status === 'ready').length - readyBefore;
+                alert(`Added ${this._pluralCount(newKeys.size, 'audio file')} from "${file.name}". Connected ${this._pluralCount(connected, 'cue')}.`);
+                if (window.app && window.app.ui) window.app.ui.renderCueTable();
             }
 
             async handleAudioFolderLoad(event) {
