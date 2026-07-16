@@ -1,9 +1,21 @@
-# The v1.0.0 build has the export libraries (jszip, FileSaver, jsPDF, jspdf-autotable)
-# vendored inline as minified source, so the file is byte-sensitive in a way the older
-# builds were not. core.autocrlf is on for this repo, which would rewrite the newlines
-# inside those minified payloads on checkout — a stray \r inside a JS string literal is
-# a data change, not a formatting one, and it would land in generated PDFs.
+# From v1.0.0 on, the export libraries (jszip, FileSaver, jsPDF, jspdf-autotable) are
+# pasted into the build instead of being fetched from cdnjs, so these files are
+# byte-sensitive in a way the older ones were not. core.autocrlf is on for this repo,
+# which would rewrite the newlines inside that minified code on checkout — a stray \r
+# inside a JS string literal is a data change, not a formatting one, and it would end
+# up in generated PDFs.
 #
-# -text disables all newline translation, so what is committed, what Netlify deploys,
-# and what was verified in the browser are the same bytes.
-TheatreCuePlayer_v1.0.0.html -text
+# -text disables newline translation entirely, so the bytes that are committed, the
+# bytes Netlify serves, and the bytes that were verified in a browser are the same.
+# It also keeps `node source/build.mjs` producing identical output on any machine,
+# which is what makes source/verify.mjs meaningful.
+#
+# Older builds (v0.9.x) are deliberately not listed: they load their libraries from
+# the network, so they are ordinary text, and changing their attributes now would
+# rewrite files that are already published.
+
+# Built, shipping files.
+TheatreCuePlayer_v1.*.html -text
+
+# The workshop: the app source and the pinned library copies it is built from.
+source/** -text

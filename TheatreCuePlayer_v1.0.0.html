@@ -12,16 +12,19 @@ v1.0.0 - Last Updated July 16, 2026
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Theatre Cue Player v1.0.0</title>
-    <!-- Export libraries, vendored inline: the page pulls nothing from the network
-         after the document loads, so exports cannot fail silently behind a district
-         firewall. Versions are pinned and the minified sources are byte-for-byte the
-         published dist builds, with two deliberate exceptions:
-           1. Trailing sourceMappingURL comments stripped (the .map files are not
-              shipped, so DevTools would 404 looking for them).
+    <!-- Export libraries, pasted in by source/build.mjs — do not hand-edit below.
+         The page fetches nothing from the network after it loads, so exports cannot
+         fail silently behind a school firewall. Versions are pinned and the code is
+         byte-for-byte the published releases, with two deliberate exceptions:
+           1. Trailing sourceMappingURL comments stripped (.map files are not shipped,
+              so dev tools would 404 looking for them).
            2. In jsPDF, the pdfobject CDN URL used by its "pdfobjectnewwindow" output
               mode is replaced with an inert placeholder. That mode is never called —
-              this app only uses output("blob") — but the URL is removed so that no
-              reference to a third-party host remains anywhere in this file. -->
+              this app only uses output("blob") — but the URL is removed so no
+              reference to an outside server remains anywhere in this file.
+         To change the app, edit source/TheatreCuePlayer.html and rebuild. Editing
+         this file directly risks corrupting the minified code below in ways that do
+         not error — they just produce broken PDFs later. -->
     <!-- jszip 3.10.1 -->
     <script>/*!
 
