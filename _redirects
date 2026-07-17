@@ -1,11 +1,21 @@
-# Old v0.9.9 build URLs -> the current build.
-# Beta was the published app link for the whole v0.9.9 run and Delta was live
-# briefly, so both are kept working for anyone who bookmarked them directly.
+# Old build URLs -> the current build.
+# Beta was the published app link for the whole v0.9.9 run, Delta was live briefly,
+# and Echo was the published link until v1.1. All are kept working for anyone who
+# bookmarked them directly.
 # 302 (not 301) on purpose: these are "whatever is current" aliases, and a 301
 # would be cached permanently by browsers, making the next build swap unfixable
 # for anyone who had followed the old link.
+#
+# These point straight at the current build rather than chaining through each other,
+# so retiring the next version means editing the target, not untangling a chain.
+#
+# v1.0.0 is deliberately absent: it was built and deployed but never linked from the
+# landing page, so nobody has it bookmarked. It stays reachable as a snapshot of the
+# first self-contained build.
 
-/theatrecueplayer_v0.9.9_beta       /theatrecueplayer_v0.9.9_echo   302
-/theatrecueplayer_v0.9.9_delta      /theatrecueplayer_v0.9.9_echo   302
-/TheatreCuePlayer_v0.9.9_Beta.html  /theatrecueplayer_v0.9.9_echo   302
-/TheatreCuePlayer_v0.9.9_Delta.html /theatrecueplayer_v0.9.9_echo   302
+/theatrecueplayer_v0.9.9_beta       /theatrecueplayer_v1.1   302
+/theatrecueplayer_v0.9.9_delta      /theatrecueplayer_v1.1   302
+/theatrecueplayer_v0.9.9_echo       /theatrecueplayer_v1.1   302
+/TheatreCuePlayer_v0.9.9_Beta.html  /theatrecueplayer_v1.1   302
+/TheatreCuePlayer_v0.9.9_Delta.html /theatrecueplayer_v1.1   302
+/TheatreCuePlayer_v0.9.9_Echo.html  /theatrecueplayer_v1.1   302
