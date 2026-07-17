@@ -2,16 +2,29 @@
 # Beta was the published app link for the whole v0.9.9 run, Delta was live briefly,
 # and Echo was the published link until v1.1. All are kept working for anyone who
 # bookmarked them directly.
+#
 # 302 (not 301) on purpose: these are "whatever is current" aliases, and a 301
 # would be cached permanently by browsers, making the next build swap unfixable
 # for anyone who had followed the old link.
 #
-# These point straight at the current build rather than chaining through each other,
-# so retiring the next version means editing the target, not untangling a chain.
+# RETIRING A BUILD TAKES TWO STEPS, and a rule alone is not enough:
+#   1. Move its .html out of the repo root, into versions/<ver>/.
+#   2. Point its URL here.
+# Netlify serves a matching file in preference to a rule in this file, so while the
+# build sits in the root its rule never fires -- silently. That is not theoretical:
+# Echo's rule was added and did nothing, because Echo's file was still in the root,
+# and anyone with the Echo bookmark carried on being served a build that loads its
+# export libraries from cdnjs and accepts .wma. Both are fixed in v1.1, and both
+# were invisible from this file alone. Beta and Delta worked only because their
+# files had already been deleted.
 #
-# v1.0.0 is deliberately absent: it was built and deployed but never linked from the
-# landing page, so nobody has it bookmarked. It stays reachable as a snapshot of the
-# first self-contained build.
+# The alternative is to force a rule with a trailing "!" (302!), which beats the
+# file. Archiving is preferred: it leaves no build sitting in the root that is
+# served at no URL, and versions/ is where old builds already live.
+#
+# v1.0.0 has no rule on purpose. It was built and deployed but never linked from the
+# landing page, so nobody has it bookmarked. Its file stays in the root and stays
+# reachable as a snapshot of the first self-contained build.
 
 /theatrecueplayer_v0.9.9_beta       /theatrecueplayer_v1.1   302
 /theatrecueplayer_v0.9.9_delta      /theatrecueplayer_v1.1   302
