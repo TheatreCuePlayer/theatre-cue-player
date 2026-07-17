@@ -66,7 +66,7 @@ Edit Mode → Add/Edit Cues → Waveform Editor → Save Project → Show Mode
 ### A. File Management
 - **Audio Folder Loading**: Recursively scans subfolders for audio files
 - **Cue File System**: .json files store cue lists independently from audio
-- **Supported Formats**: MP3, WAV, OGG, M4A, AAC, FLAC, WMA
+- **Supported Formats**: MP3, WAV, OGG, M4A, AAC, FLAC
 - **File Independence**: Audio library separate from show-specific cue files
 
 ### B. Cue Types
