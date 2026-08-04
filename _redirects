@@ -26,6 +26,21 @@
 # landing page, so nobody has it bookmarked. Its file stays in the root and stays
 # reachable as a snapshot of the first self-contained build.
 
+# The old Netlify address -> the real domain.
+# theatre-cue-player.netlify.app and theatrecueplayer.app are the same Netlify site,
+# and Netlify does NOT redirect one to the other on its own -- it just serves both,
+# so the app was reachable at two addresses. This rule sends every netlify.app URL
+# to the same path on theatrecueplayer.app.
+#
+# The trailing "!" is required: every path here (/, /theatrecueplayer_v1.1, ...) has
+# a real file behind it, and without the "!" the file wins and the rule never fires
+# -- the same silent failure described above.
+#
+# 301 (not 302) on purpose: unlike the build aliases, this one is genuinely permanent.
+# The domain is not going to change back. Browsers will cache it, which is the point.
+
+https://theatre-cue-player.netlify.app/*  https://theatrecueplayer.app/:splat  301!
+
 /theatrecueplayer_v0.9.9_beta       /theatrecueplayer_v1.1   302
 /theatrecueplayer_v0.9.9_delta      /theatrecueplayer_v1.1   302
 /theatrecueplayer_v0.9.9_echo       /theatrecueplayer_v1.1   302
