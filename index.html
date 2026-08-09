@@ -272,8 +272,8 @@
         <h1>Theatre Cue Player</h1>
         <p class="tagline">Professional Audio Cue Management for Educational Theatre</p>
         <p style="font-size: 1rem; color: #aaa; margin-bottom: 3rem; margin-top: -2.5rem;"><a
-                href="mailto:TheatreCuePlayer@gmail.com"
-                style="color: #aaa; text-decoration: none;">TheatreCuePlayer@gmail.com</a></p>
+                href="mailto:contact@theatrecueplayer.app"
+                style="color: #aaa; text-decoration: none;">contact@theatrecueplayer.app</a></p>
 
         <div style="margin-bottom: 2rem;">
             <div style="margin-bottom: 0.75rem;">
@@ -344,7 +344,7 @@
                             </div>
                         </a>
 
-                        <a href="#" target="_blank" class="video-card">
+                        <a href="https://youtu.be/AIovD7ayCic" target="_blank" class="video-card">
                             <img src="images/Slide6.PNG" alt="Video 6 Thumbnail">
                             <div class="video-info">
                                 <h3>6. Hotkeys & Live Control</h3>
@@ -399,12 +399,75 @@
             </div>
         </div>
 
+        <!-- Theatre Cue Player Extension.
+             This section exists for two audiences: teachers deciding whether to wait for it,
+             and Google's OAuth reviewer, who reads this page to understand why the app asks
+             for Drive access. Keep the "How it uses Google Drive" wording accurate and in
+             step with manifest.json and privacy.html -- a homepage that disagrees with the
+             consent screen is a standard verification rejection. -->
+        <div class="version-card beta" style="text-align: left; margin-bottom: 2rem;">
+            <div style="text-align: center;">
+                <div class="version-number">Theatre Cue Player Extension</div>
+                <span class="version-status status-beta">In testing — not yet on the Chrome Web Store</span>
+            </div>
+
+            <p style="margin: 1.25rem 0;">A Chrome extension that adds <strong>video and projection</strong> to
+                everything the browser version already does. It is being tested in real productions now and will
+                be published to the Chrome Web Store once that testing is finished. Audio-only shows will always
+                be free.</p>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                <div>
+                    <h4 style="color: #ffd700; margin-bottom: 0.5rem; border-bottom: 1px solid #444; padding-bottom: 5px;">
+                        Video &amp; Projection</h4>
+                    <ul style="line-height: 1.6; padding-left: 1.2rem;">
+                        <li><strong>Second-Screen Output:</strong> Clean full-screen projection to a projector or
+                            second monitor, black between cues.</li>
+                        <li><strong>Projection Mapping:</strong> Corner-pin warp and masking onto set pieces,
+                            scrims, and odd-shaped surfaces.</li>
+                        <li><strong>Video Cues:</strong> Fades, loops, trimming, playback rate, and pause/resume,
+                            fired from the same cue list as your audio.</li>
+                        <li><strong>Text Cues:</strong> Titles, supertitles, crawls and rolls.</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 style="color: #ffd700; margin-bottom: 0.5rem; border-bottom: 1px solid #444; padding-bottom: 5px;">
+                        Shows That Travel</h4>
+                    <ul style="line-height: 1.6; padding-left: 1.2rem;">
+                        <li><strong>Two Storage Modes:</strong> A plain folder on the machine, or your own Google
+                            Drive — your choice, changeable at any time.</li>
+                        <li><strong>Cue Sheet Export:</strong> Generate a formatted Google Sheet of your cue list
+                            for the stage manager and the booth.</li>
+                        <li><strong>Built for Chromebooks:</strong> Runs offline once a show is open, so a dropped
+                            network can't stop a performance.</li>
+                        <li><strong>Sound Editor:</strong> Trim, fade, and clean up audio without leaving the app.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div style="margin-top: 1.5rem; padding: 1rem 1.25rem; background: rgba(0,0,0,0.25); border-radius: 8px;">
+                <h4 style="color: #ffd700; margin-bottom: 0.5rem;">How it uses Google Drive</h4>
+                <p style="line-height: 1.6;">Google Drive is <strong>optional</strong>. The extension works
+                    completely without it — in folder mode it never contacts Google, never asks you to sign in,
+                    and makes no network connections at all, which matters in districts where Drive is blocked.</p>
+                <p style="line-height: 1.6; margin-top: 0.75rem;">If you do connect it, shows are saved to
+                    <em>your own</em> Drive so a cue list follows you from the classroom to the booth, and cue
+                    sheets can be exported straight to Google Sheets. It asks for a <strong>single per-file
+                    permission</strong> (<code>drive.file</code>) which lets it read and write only the show
+                    files it creates and the cue sheets it makes for you. <strong>It cannot see anything else in
+                    your Drive</strong>, and there is no Theatre Cue Player server — nothing you make is sent to
+                    the developer. Full detail is in the <a href="/privacy" style="color: #ffd700;">privacy
+                    policy</a>.</p>
+            </div>
+        </div>
+
         <div class="roadmap">
             <h3>Roadmap</h3>
             <ul>
-                <li><strong>Current Version:</strong> Stability and Core Audio Features.</li>
-                <li><strong>Future Development:</strong> A dedicated Chrome Extension with Google Drive Integration,
-                    Video Mapping, and MIDI/OSC Support.</li>
+                <li><strong>Browser Version:</strong> Stability and core audio features.</li>
+                <li><strong>Extension (in testing):</strong> Video cues, projection mapping, second-screen output,
+                    and optional Google Drive storage.</li>
+                <li><strong>Future Development:</strong> MIDI and OSC support.</li>
             </ul>
         </div>
 
@@ -418,6 +481,10 @@
                 <a href="https://docs.google.com/forms/d/e/1FAIpQLSdz9wKHLn2PQcCU-8N5jq_rdBeXVd8M8tmhj46iXycdEufdGA/viewform" target="_blank" style="color: #aaa;">Join Mailing List</a>
                 &nbsp;·&nbsp;
                 <a href="https://docs.google.com/forms/d/e/1FAIpQLSeyvpchOr6dK1wZjcItejDsUZhRVJF3IysqjxFr5yZujn8HQQ/viewform" target="_blank" style="color: #aaa;">Unsubscribe</a>
+                &nbsp;·&nbsp;
+                <!-- Required: Google's OAuth verification checks that the privacy policy is
+                     reachable from the app's homepage. Do not remove this link. -->
+                <a href="/privacy" style="color: #aaa;">Privacy Policy</a>
             </p>
         </div>
     </div>
