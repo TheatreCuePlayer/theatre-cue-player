@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Policy — Theatre Cue Player</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1c1e21; --muted: #5c6370; --rule: #e3e5e9;
+    --accent: #3b4bd8; --card: #f6f7f9; --card-edge: #e3e5e9;
+    --warn-bg: #fff8e6; --warn-edge: #e8d9a8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14161a; --fg: #e6e8ec; --muted: #9aa0ab; --rule: #2a2e36;
+      --accent: #9aa4ff; --card: #1c1f25; --card-edge: #2a2e36;
+      --warn-bg: #2a2413; --warn-edge: #4a4020;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 46rem; margin: 0 auto; padding: 3rem 1.25rem 5rem; }
+  h1 { font-size: 1.9rem; line-height: 1.2; margin: 0 0 .4rem; letter-spacing: -.01em; }
+  h2 {
+    font-size: 1.15rem; margin: 2.6rem 0 .8rem; padding-top: 1.4rem;
+    border-top: 1px solid var(--rule); letter-spacing: -.005em;
+  }
+  h3 { font-size: 1rem; margin: 1.6rem 0 .5rem; }
+  p, li { color: var(--fg); }
+  .lede { color: var(--muted); margin: 0 0 2rem; }
+  .updated { color: var(--muted); font-size: .9rem; }
+  ul { padding-left: 1.25rem; }
+  li { margin: .4rem 0; }
+  a { color: var(--accent); }
+  code {
+    font: .875em ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    background: var(--card); border: 1px solid var(--card-edge);
+    border-radius: 4px; padding: .1em .35em;
+  }
+  .card {
+    background: var(--card); border: 1px solid var(--card-edge);
+    border-radius: 8px; padding: 1rem 1.15rem; margin: 1.2rem 0;
+  }
+  .card p:first-child, .card ul:first-child { margin-top: 0; }
+  .card p:last-child, .card ul:last-child { margin-bottom: 0; }
+  .draft {
+    background: var(--warn-bg); border: 1px solid var(--warn-edge);
+    border-radius: 8px; padding: 1rem 1.15rem; margin: 0 0 2rem;
+  }
+  .tablewrap { overflow-x: auto; margin: 1.2rem 0; }
+  table { border-collapse: collapse; width: 100%; min-width: 32rem; font-size: .93rem; }
+  th, td { text-align: left; padding: .6rem .7rem; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  th { font-weight: 600; color: var(--muted); font-size: .82rem; text-transform: uppercase; letter-spacing: .04em; }
+  .big { font-size: 1.05rem; }
+  footer { margin-top: 3.5rem; padding-top: 1.4rem; border-top: 1px solid var(--rule); color: var(--muted); font-size: .9rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>Privacy Policy</h1>
+  <p class="lede">Theatre Cue Player — browser extension for live theatre cue playback</p>
+  <p class="updated"><strong>Effective:</strong> 9 August 2026 &nbsp;·&nbsp; <strong>Last updated:</strong> 9 August 2026</p>
+
+  <div class="card">
+    <p class="big"><strong>The short version.</strong> Theatre Cue Player has no account system, no
+    server, and no database. Your shows, sound and video stay on your own computer and — if you
+    choose to use Google Drive — in your own Google Drive. Nothing is sent to the developer.
+    No information about students is collected, ever.</p>
+  </div>
+
+  <h2>Who this is from</h2>
+  <p>Theatre Cue Player is built and maintained by Kevin Patrick, an individual developer, not a
+  company. Questions about this policy or about your data go to
+  <a href="mailto:contact@theatrecueplayer.app">contact@theatrecueplayer.app</a>.</p>
+
+  <h2>There is no Theatre Cue Player server</h2>
+  <p>This is the single most important thing to understand, because it makes most of the usual
+  privacy questions inapplicable. There is no service to sign up for, no account, no password,
+  and no place where the developer stores your work. Theatre Cue Player runs entirely inside your
+  browser. When it saves a show, it saves it to a folder you picked on your own machine, or to
+  your own Google Drive using your own Google account.</p>
+  <p>The developer cannot see your shows, your cue lists, your media files, your file names, or
+  your Google Drive. There is no mechanism by which that information could reach them.</p>
+
+  <h2>What is stored on your device</h2>
+  <p>The extension keeps a small amount of information locally so it can pick up where you left
+  off. None of it leaves your device.</p>
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>What</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td>Which storage mode you chose (folder or Google Drive), and the folder or Drive location</td><td>So it can reopen your shows next time</td></tr>
+      <tr><td>The last show you had open</td><td>So it can offer to reopen it</td></tr>
+      <tr><td>Your settings</td><td>Fade lengths, cue numbering, and so on</td></tr>
+      <tr><td>Your sound and video files</td><td>Cached in the browser's local storage so shows play instantly and work offline</td></tr>
+      <tr><td>Files still waiting to upload</td><td>So a save interrupted by a dropped network finishes later</td></tr>
+      <tr><td>A licence expiry date, a launch counter, and whether you dismissed a notice</td><td>So the app knows what to show you and when</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>All of it can be erased at any time by removing the extension, or through your browser's
+  normal "clear browsing data" controls. None of it is transmitted anywhere.</p>
+
+  <h2>Your Google account, if you use Drive mode</h2>
+  <p>Google Drive is <em>optional</em>. Theatre Cue Player works completely without it: in folder
+  mode it never contacts Google, never asks you to sign in, and makes no network connections at
+  all. Schools that block Google services can use it exactly this way.</p>
+  <p>If you do choose Drive mode, you sign in with Google's own sign-in window. The developer
+  never sees your password. Google issues an access token which is held and refreshed by your
+  browser; the extension does not store it.</p>
+
+  <h3>What is requested, and what it is used for</h3>
+  <p>Theatre Cue Player asks for <strong>one</strong> permission, and it is the narrowest one
+  Google offers for this purpose:</p>
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>Permission</th><th>What it is used for</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>drive.file</code><br>per-file Drive access</td>
+        <td>Reading and writing <em>only</em> the show files, media and cue-sheet spreadsheets that
+        Theatre Cue Player itself creates, or that you explicitly open with it. This is the whole
+        of its access to your Google account.</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+  <p><strong>This permission cannot see the rest of your Drive.</strong> Files you did not create
+  with Theatre Cue Player, and did not deliberately open in it, are invisible to it — not merely
+  untouched, but genuinely unreadable. It also has no access to your Gmail, Calendar, Contacts,
+  Photos, or any other Google service, and it never learns your email address or your name.</p>
+  <p>Your Google data is used only to provide the features you asked for, in the moment you ask
+  for them. It is never sold, never shared, never used for advertising, never used to build a
+  profile, and never used to train any machine-learning or AI model.</p>
+
+  <div class="card">
+    <p><strong>Limited Use disclosure.</strong> Theatre Cue Player's use and transfer of information
+    received from Google APIs to any other app adheres to the
+    <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">Google
+    API Services User Data Policy</a>, including its Limited Use requirements.</p>
+  </div>
+
+  <h3>Revoking access</h3>
+  <p>Signing out inside Theatre Cue Player revokes its token immediately. You can also remove its
+  access at any time from
+  <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">your Google
+  account's permissions page</a>. Doing so does not delete any of your shows — they remain in your
+  Drive, and remain yours.</p>
+
+  <h2>Analytics</h2>
+  <p><strong>Theatre Cue Player currently collects no analytics of any kind.</strong> No usage data
+  is gathered and no analytics service is contacted.</p>
+  <p>The software contains an optional, switched-off capability to report two anonymous counts — that
+  a show was created, and that second-screen output was opened. It is off on every installation and
+  would only ever send anything if someone deliberately switched it on. Should that ever change:</p>
+  <ul>
+    <li>Only those two event names would be sent. There is no field in the request capable of
+    carrying a show name, file name, cue list, folder path, email address, school name or device
+    identifier.</li>
+    <li>No cookies would be set, and nothing would be stored on your device to enable it.</li>
+    <li>It would remain opt-in, and a school could turn it off for every machine sharing a shows
+    folder at once.</li>
+  </ul>
+  <p>No third-party advertising, tracking, fingerprinting or session-recording code is present in
+  the extension, and none will be added.</p>
+
+  <h2>Students and schools</h2>
+  <p>Theatre Cue Player collects no information about students. It has no student-facing accounts,
+  no rosters, no grades, no attendance, no logins, and no way to identify any individual. Because it
+  gathers no personal information from anyone, it does not create education records and does not
+  collect personal information from children.</p>
+  <p>It is designed to be usable by a school that permits no outbound network access at all: in
+  folder mode, the extension makes no network connections whatsoever.</p>
+
+  <h2>The mailing list, if you join it</h2>
+  <p>Theatre Cue Player is free for the 2026–27 school year, and the app may offer you a link to
+  leave an email address so you can be told about pricing before that changes. This is entirely
+  voluntary, appears at most once, and can be dismissed permanently.</p>
+  <p>That form is a Google Form, and any answers you give go to a Google Sheet controlled by the
+  developer — not through the extension, which never sees or sends them. It is used only to contact
+  you about Theatre Cue Player and to help decide fair pricing. It is never sold or shared. Ask at
+  the address above and your entry will be deleted.</p>
+
+  <h2>Everything the extension connects to</h2>
+  <p>This is the complete list. There are no others.</p>
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>Destination</th><th>When</th></tr></thead>
+    <tbody>
+      <tr><td>Google sign-in and token services</td><td>Only in Drive mode, when signing in or out</td></tr>
+      <tr><td>Google Drive API</td><td>Only in Drive mode, to read and write your own show files</td></tr>
+      <tr><td>Google Sheets API</td><td>Only when you export a cue sheet to Google Sheets</td></tr>
+      <tr><td>An analytics endpoint</td><td>Never, as currently shipped — see Analytics above</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p>In folder mode, none of these are contacted and the extension works entirely offline.</p>
+
+  <h2>Keeping it secure</h2>
+  <p>Because your work stays on your own devices and in your own Google account, its security is
+  governed by your computer's and your Google account's protections. The extension contains no
+  remotely-loaded code: everything it runs is included in the package reviewed and distributed by
+  the Chrome Web Store. All connections to Google use encrypted HTTPS.</p>
+
+  <h2>Changes to this policy</h2>
+  <p>If this policy changes in a way that affects what is collected, the date at the top will be
+  updated and the change will be described in the extension's release notes. Meaningful changes will
+  never be applied retroactively to data already collected — of which, at present, there is none.</p>
+
+  <h2>Contact</h2>
+  <p>Questions, corrections, or a request to delete a mailing-list entry:
+  <a href="mailto:contact@theatrecueplayer.app">contact@theatrecueplayer.app</a>.</p>
+  <p>This policy is governed by the laws of the State of Texas, United States.</p>
+
+  <footer>
+    Theatre Cue Player · <a href="https://theatrecueplayer.app">theatrecueplayer.app</a>
+  </footer>
+
+</div>
+</body>
+</html>
