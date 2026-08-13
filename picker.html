@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Choose from Google Drive — Theatre Cue Player</title>
+<link rel="icon" type="image/png" sizes="32x32" href="images/tcp-icon-32.png">
+<style>
+  :root { --bg:#1a1a1a; --fg:#f4f6fa; --muted:#9aa0ab; --gold:#ffd700; --green:#00e676; --red:#ff8b8b; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%); color: var(--fg);
+    font: 15px/1.6 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; padding: 2rem;
+  }
+  .box { max-width: 30rem; }
+  img.mark { width: 64px; height: 64px; display: block; margin: 0 auto 1.2rem; }
+  h1 { color: var(--gold); font-size: 1.35rem; margin: 0 0 .6rem; }
+  p { color: var(--muted); margin: .5rem 0; }
+  .status { margin-top: 1.2rem; font-weight: 600; color: var(--fg); }
+  .err { color: var(--red); }
+  .ok { color: var(--green); }
+  code { background: rgba(255,255,255,.08); padding: .1em .4em; border-radius: 4px; font-size: .9em; }
+  .spinner {
+    width: 26px; height: 26px; margin: 1.2rem auto 0; border: 3px solid rgba(255,255,255,.15);
+    border-top-color: var(--gold); border-radius: 50%; animation: spin .9s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<div class="box">
+  <img class="mark" src="images/tcp-icon-128.png" alt="">
+  <h1>Choose from Google Drive</h1>
+  <p id="lede">Waiting for Theatre Cue Player…</p>
+  <div id="spin" class="spinner"></div>
+  <p id="status" class="status"></p>
+</div>
+
+<script>
+/* ---------------------------------------------------------------------------
+ * Theatre Cue Player — Google Drive picker bridge.
+ *
+ * WHY THIS PAGE EXISTS
+ * The Google Picker is the only sanctioned way to reach a user's Drive file
+ * while staying on the narrow `drive.file` scope. Everything else needs
+ * `drive.readonly` or `drive`, which are RESTRICTED scopes: full verification
+ * plus a paid annual security assessment. But the Picker works by loading
+ * apis.google.com/js/api.js, and Manifest V3 forbids remotely hosted code — the
+ * extension was rejected once already for a far smaller version of exactly that.
+ *
+ * So the remote code runs here, on our own web page, and the extension talks to
+ * it over postMessage. That is legitimate: nothing is loaded into the package.
+ *
+ * THE PART THAT IS EASY TO GET WRONG
+ * The Picker must run with the EXTENSION'S OAuth token, not a token of its own.
+ * A `drive.file` grant attaches to whichever OAuth client ran the Picker, so if
+ * this page authenticated separately the extension would still be unable to read
+ * the chosen file. The extension sends its token over; we never mint one.
+ *
+ * The token therefore never appears in the URL — no query string, no fragment —
+ * because URLs land in history, referrers and server logs. It arrives by
+ * postMessage and stays in memory.
+ *
+ * PROTOCOL
+ *   extension -> page   { type:'tcp-picker-init', token, accept?, multiple? }
+ *   page -> extension   { type:'tcp-picker-result', files:[{id,name,mimeType,sizeBytes}] }
+ *                       { type:'tcp-picker-cancel' }
+ *                       { type:'tcp-picker-error', message }
+ * Both ends verify origin. See js/sync/drive-picker.js in the extension repo.
+ * ------------------------------------------------------------------------- */
+
+/* The only origin allowed to hand us a token or receive a result. Chrome Web Store
+   item id, pinned by the "key" in the extension's manifest so unpacked development
+   builds share it. If the id ever changes, this must change with it. */
+var EXTENSION_ORIGIN = 'chrome-extension://meanilaokadjkgoflflcbpgpgcebamdm';
+
+/* Picker developer key. Google Cloud Console -> Credentials -> Create API key,
+   then RESTRICT IT: Application restrictions -> HTTP referrers -> add
+   https://theatrecueplayer.app/*  — an unrestricted key can be lifted from this
+   page and used against your quota. Also enable "Google Picker API" under
+   APIs & Services -> Library. */
+var API_KEY = '';
+
+/* Cloud project number, taken from the front of the OAuth client id. The Picker
+   needs it to attach the drive.file grant to the right app; without it the user
+   picks a file and the extension still cannot read it. */
+var APP_ID = '580777106671';
+
+var MIME = {
+  audio: 'audio/mpeg,audio/mp3,audio/wav,audio/x-wav,audio/ogg,audio/mp4,audio/aac,audio/flac,audio/webm',
+  video: 'video/mp4,video/webm,video/ogg,image/jpeg,image/png'
+};
+
+var lede = document.getElementById('lede');
+var statusEl = document.getElementById('status');
+var spin = document.getElementById('spin');
+var token = null, opts = {}, pickerReady = false, launched = false;
+
+function say(msg, cls) {
+  statusEl.textContent = msg || '';
+  statusEl.className = 'status' + (cls ? ' ' + cls : '');
+}
+function stopSpin() { spin.classList.add('hidden'); }
+
+function reply(payload) {
+  if (!window.opener) return;
+  try { window.opener.postMessage(payload, EXTENSION_ORIGIN); } catch (e) { /* window gone */ }
+}
+
+function fail(message) {
+  stopSpin();
+  say(message, 'err');
+  reply({ type: 'tcp-picker-error', message: message });
+}
+
+/* Opened directly rather than by the extension — explain instead of hanging. */
+if (!window.opener) {
+  stopSpin();
+  lede.textContent = 'This page is opened by the Theatre Cue Player extension.';
+  say('Nothing to do here. Use Assign from Google Drive inside the app.');
+} else {
+  reply({ type: 'tcp-picker-ready' });
+  setTimeout(function () {
+    if (!token) fail('Theatre Cue Player did not send a sign-in token. Close this window and try again.');
+  }, 15000);
+}
+
+window.addEventListener('message', function (ev) {
+  if (ev.origin !== EXTENSION_ORIGIN) return;            // ignore everything else
+  var msg = ev.data;
+  if (!msg || msg.type !== 'tcp-picker-init') return;
+  if (typeof msg.token !== 'string' || !msg.token) return fail('No usable sign-in token.');
+  token = msg.token;
+  opts = { accept: msg.accept === 'video' ? 'video' : 'audio', multiple: !!msg.multiple };
+  lede.textContent = 'Opening your Drive…';
+  loadPicker();
+});
+
+function loadPicker() {
+  if (!API_KEY) {
+    return fail('This page is not configured yet (missing Picker API key). ' +
+                'See the comment at the top of picker.html.');
+  }
+  if (pickerReady) return launch();
+  var s = document.createElement('script');
+  s.src = 'https://apis.google.com/js/api.js';
+  s.onload = function () {
+    gapi.load('picker', {
+      callback: function () { pickerReady = true; launch(); },
+      onerror: function () { fail('Could not load the Google Picker.'); }
+    });
+  };
+  s.onerror = function () {
+    fail('Could not reach Google. Check the network, then try again.');
+  };
+  document.head.appendChild(s);
+}
+
+function launch() {
+  if (launched) return;
+  launched = true;
+  stopSpin();
+  say('Choose a file, then this window will close.');
+  try {
+    var view = new google.picker.DocsView(google.picker.ViewId.DOCS)
+      .setMimeTypes(MIME[opts.accept])
+      .setIncludeFolders(true)
+      .setSelectFolderEnabled(false);
+
+    var b = new google.picker.PickerBuilder()
+      .setOAuthToken(token)
+      .setDeveloperKey(API_KEY)
+      .setAppId(APP_ID)
+      .setOrigin(window.location.protocol + '//' + window.location.host)
+      .addView(view)
+      .addView(new google.picker.DocsUploadView())
+      .setTitle('Choose audio for your cue')
+      .setCallback(onPick);
+
+    if (opts.multiple) b.enableFeature(google.picker.Feature.MULTISELECT_ENABLED);
+    b.build().setVisible(true);
+  } catch (e) {
+    fail('Could not open the picker: ' + (e && e.message ? e.message : e));
+  }
+}
+
+function onPick(data) {
+  var A = google.picker.Action, D = google.picker.Document;
+  if (data[google.picker.Response.ACTION] === A.CANCEL) {
+    say('Cancelled.');
+    reply({ type: 'tcp-picker-cancel' });
+    return setTimeout(function () { window.close(); }, 400);
+  }
+  if (data[google.picker.Response.ACTION] !== A.PICKED) return;
+
+  var docs = data[google.picker.Response.DOCUMENTS] || [];
+  var files = docs.map(function (d) {
+    return {
+      id: d[D.ID],
+      name: d[D.NAME],
+      mimeType: d[D.MIME_TYPE],
+      sizeBytes: Number(d[D.SIZE_BYTES] || 0)
+    };
+  }).filter(function (f) { return f.id; });
+
+  if (!files.length) return fail('Nothing was selected.');
+
+  say(files.length === 1 ? 'Sending "' + files[0].name + '" back…'
+                         : 'Sending ' + files.length + ' files back…', 'ok');
+  reply({ type: 'tcp-picker-result', files: files });
+  setTimeout(function () { window.close(); }, 600);
+}
+</script>
+</body>
+</html>
