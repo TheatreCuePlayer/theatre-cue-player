@@ -284,6 +284,81 @@
             font-size: 0.9rem;
             color: #ccc;
         }
+
+        /* --- 2026-08-09 reshape: extension-led layout ---------------------- */
+        .hero-card { text-align: left; max-width: 860px; margin: 0 auto 2.5rem; }
+        .hero-card .hero-head { text-align: center; }
+        .cta-install {
+            font-size: 1.15rem; font-weight: 700; padding: 1.05rem 2rem;
+            background: #28a745; display: inline-flex; align-items: center; gap: 0.65rem;
+            box-shadow: 0 0 0 3px #ffd700, 0 6px 20px rgba(255, 215, 0, 0.35);
+        }
+        .cta-install:hover { background: #1e7e34; }
+        .price-note { color: #cfd3da; font-size: 0.98rem; margin-top: 0.9rem; }
+        .price-note strong { color: #ffd700; }
+        .feature-cols {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+            gap: 1.8rem; text-align: left; margin-top: 1.5rem;
+        }
+        .feature-cols h4 {
+            color: #ffd700; margin-bottom: 0.5rem;
+            border-bottom: 1px solid #444; padding-bottom: 5px;
+        }
+        .feature-cols ul { line-height: 1.6; padding-left: 1.2rem; }
+        .drive-box {
+            margin-top: 1.75rem; padding: 1.15rem 1.35rem;
+            background: rgba(0, 0, 0, 0.28); border-radius: 8px;
+        }
+        .drive-box h4 { color: #ffd700; margin-bottom: 0.6rem; }
+        .drive-box p { line-height: 1.6; }
+        .drive-box p + p { margin-top: 0.75rem; }
+        .alt-card { max-width: 860px; margin: 0 auto 2.5rem; text-align: left; }
+        .alt-card p { line-height: 1.6; }
+        .section-heading { color: #ffd700; margin: 2.5rem 0 0.5rem; font-size: 1.4rem; }
+        .section-sub { color: #aaa; margin-bottom: 1.25rem; }
+
+        html { scroll-behavior: smooth; }
+        #extension, #browser, #tutorials, #next { scroll-margin-top: 5.5rem; }
+        .jump-nav {
+            display: flex; flex-wrap: wrap; justify-content: center;
+            gap: 0.6rem; margin: 0 0 2.5rem;
+            position: sticky; top: 0; z-index: 50;
+            padding: 0.75rem 0.5rem;
+            background: rgba(24, 24, 27, 0.94);
+            backdrop-filter: blur(6px);
+            border-bottom: 1px solid #3a3a42;
+            border-radius: 0 0 10px 10px;
+        }
+        .jump-nav .jump {
+            margin: 0; background: rgba(255, 255, 255, 0.09);
+            border: 1px solid #4a4a52; padding: 0.7rem 1.25rem; font-size: 0.95rem;
+        }
+        .jump-nav .jump:hover { background: rgba(255, 215, 0, 0.16); border-color: #ffd700; }
+
+        .strapline {
+            color: #ffd700; font-size: 1.05rem; font-style: italic;
+            margin: -2.4rem 0 0.55rem;
+        }
+        .origin {
+            max-width: 780px; margin: 0 auto 2.5rem; text-align: left;
+            padding: 1.5rem 1.6rem; border-left: 3px solid #ffd700;
+            background: rgba(255, 255, 255, 0.04); border-radius: 0 10px 10px 0;
+        }
+        .origin h2 { color: #ffd700; font-size: 1.3rem; margin-bottom: 0.8rem; }
+        .origin p { line-height: 1.7; }
+        .origin p + p { margin-top: 0.9rem; }
+        .leads-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+            gap: 1rem; margin-bottom: 1rem;
+        }
+        .lead-card {
+            display: block; text-align: left; text-decoration: none; color: #fff;
+            background: #2a2a2a; border: 1px solid #444; border-radius: 8px;
+            padding: 1.1rem 1.2rem; transition: transform 0.2s, border-color 0.2s;
+        }
+        .lead-card:hover { transform: translateY(-4px); border-color: #ffd700; }
+        .lead-card h3 { color: #ffd700; font-size: 1.05rem; margin-bottom: 0.4rem; }
+        .lead-card p { color: #ccc; font-size: 0.9rem; line-height: 1.5; margin: 0; }
     </style>
 </head>
 
@@ -292,223 +367,255 @@
         <div class="logo"><img src="images/tcp-icon-128.png" width="88" height="88"
                 alt="Theatre Cue Player logo"></div>
         <h1>Theatre Cue Player</h1>
-        <p class="tagline">Professional Audio Cue Management for Educational Theatre</p>
-        <p style="font-size: 1rem; color: #aaa; margin-bottom: 3rem; margin-top: -2.5rem;"><a
+        <p class="tagline">Show control for school theatre &mdash; audio, video and projection</p>
+        <p class="strapline">Made for education. Powerful enough to run the show.</p>
+        <p style="font-size: 1rem; color: #aaa; margin-bottom: 2.5rem; margin-top: 0;"><a
                 href="mailto:contact@theatrecueplayer.app"
                 style="color: #aaa; text-decoration: none;">contact@theatrecueplayer.app</a></p>
 
-        <div style="margin-bottom: 2rem;">
-            <div style="margin-bottom: 0.75rem;">
-                <a href="https://www.youtube.com/playlist?list=PLkQulRclNF92Az4KSnG3tzp_z0suteEKs" class="btn btn-primary"
-                    target="_blank">Video Tutorials</a>
-                <a href="manual.md" class="btn" target="_blank">View Manual</a>
-                <a href="https://drive.google.com/drive/folders/1lpwQnVdo0U_jVGwgeWPI64bR0HO1g5Ud?usp=sharing"
-                    class="btn" target="_blank">Lesson Plans</a>
-            </div>
-            <div>
-                <a href="https://docs.google.com/forms/d/e/1FAIpQLScR74COBgKIzvGrJzyVOfaqO4lBFAvtcPS96ul3YbShFxB8Ug/viewform?usp=sharing"
-                    class="btn" style="background: #6c757d;" target="_blank">Bug Report / Feature Request</a>
-                <a href="https://docs.google.com/forms/d/e/1FAIpQLSdz9wKHLn2PQcCU-8N5jq_rdBeXVd8M8tmhj46iXycdEufdGA/viewform"
-                    class="btn" style="background: #6c757d;" target="_blank">Join Mailing List</a>
-            </div>
-        </div>
+        <!-- Jump nav. A fifth button for the related-tools page goes here when that
+             page exists - do not add it before there is something to link to. -->
+        <nav class="jump-nav">
+            <a href="#extension" class="btn jump">Extension</a>
+            <a href="#browser" class="btn jump">Browser Version</a>
+            <a href="#tutorials" class="btn jump">Tutorials</a>
+            <a href="#next" class="btn jump">Where This Leads</a>
+            <a href="https://docs.google.com/forms/d/e/1FAIpQLSd39m2mW22l95mEehJAsRt94zZbHMtMeaaMN_38mtkSNl0-9Q/viewform" class="btn jump" target="_blank" rel="noopener">Mailing List</a>
+        </nav>
 
-        <div class="version-grid">
-            <div class="version-card latest" style="grid-column: 1 / -1; max-width: 800px; margin: 0 auto;">
-                <div class="button-container">
-                    <a href="/theatrecueplayer_v1.1" class="btn" style="font-size: 1.2rem; font-weight: bold; padding: 1.1rem 2rem; box-shadow: 0 0 0 3px #ffd700, 0 6px 20px rgba(255,215,0,0.4); display: inline-flex; align-items: center; gap: 0.65rem;"><img
-                            src="images/tcp-icon-128.png" alt="" width="28" height="28">OPEN THEATRE CUE PLAYER IN BROWSER HERE</a>
-                </div>
-
-
-                <div class="video-section">
-                    <h2>Video Guides: The Technical Director Series</h2>
-                    <p>Master the workflow with our 6-part video course.</p>
-
-                    <div class="video-grid">
-
-                        <a href="https://youtu.be/7qxbLyMS038" target="_blank" class="video-card">
-                            <img src="images/Slide1.PNG" alt="Video 1 Thumbnail">
-                            <div class="video-info">
-                                <h3>1. Architecture & Setup</h3>
-                                <p>Best practices for file management and PWA installation.</p>
-                            </div>
-                        </a>
-
-                        <a href="https://youtu.be/FN4YseZHZPk" target="_blank" class="video-card">
-                            <img src="images/Slide2.PNG" alt="Video 2 Thumbnail">
-                            <div class="video-info">
-                                <h3>2. Building Cues</h3>
-                                <p>Targeting audio, renumbering, and auto-follow logic.</p>
-                            </div>
-                        </a>
-
-                        <a href="https://youtu.be/hBr9lKq1bBM" target="_blank" class="video-card">
-                            <img src="images/Slide3.PNG" alt="Video 3 Thumbnail">
-                            <div class="video-info">
-                                <h3>3. Fades & Pan Fades</h3>
-                                <p>Using the Toolbar, fade cues, and spatial audio panning.</p>
-                            </div>
-                        </a>
-
-                        <a href="https://youtu.be/nPaaMNhhtT8" target="_blank" class="video-card">
-                            <img src="images/Slide4.PNG" alt="Video 4 Thumbnail">
-                            <div class="video-info">
-                                <h3>4. Waveform Editor</h3>
-                                <p>Non-destructive trimming and integrated fade curves.</p>
-                            </div>
-                        </a>
-
-                        <a href="https://youtu.be/dDFAU8ydF54" target="_blank" class="video-card">
-                            <img src="images/Slide5.PNG" alt="Video 5 Thumbnail">
-                            <div class="video-info">
-                                <h3>5. Exporting & Cue Sheets</h3>
-                                <p>Creating Zip packages and generating PDF cue sheets.</p>
-                            </div>
-                        </a>
-
-                        <a href="https://youtu.be/AIovD7ayCic" target="_blank" class="video-card">
-                            <img src="images/Slide6.PNG" alt="Video 6 Thumbnail">
-                            <div class="video-info">
-                                <h3>6. Hotkeys & Live Control</h3>
-                                <p>Handling ad-libs, overlaps, and mid-show additions.</p>
-                            </div>
-                        </a>
-
-                    </div>
-                </div>
-
-                <div class="version-number">Product Highlights</div>
-
-                <p style="font-size: 1.1rem; margin-bottom: 2rem;"><strong>The complete educational audio
-                        solution.</strong><br>
-                    Professional-grade show control designed specifically for student operators and Chromebook
-                    environments.</p>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; text-align: left;">
-                    <div>
-                        <h4
-                            style="color: #ffd700; margin-bottom: 0.5rem; border-bottom: 1px solid #444; padding-bottom: 5px;">
-                            Show Control</h4>
-                        <ul style="line-height: 1.6; padding-left: 1.2rem;">
-                            <li><strong>Unified Workflow:</strong> Fade All, Stop All, and instant "Go" playback.</li>
-                            <li><strong>Multi-Layer Playback:</strong> Seamless overlapping audio instances.</li>
-                            <li><strong>Automation:</strong> Auto-Follow, Auto-Continue, and Infinite Loops.</li>
-                            <li><strong>Hotkeys:</strong> Instant-fire sound effects grid (1-0).</li>
-                            <li><strong>Waveform Clarity:</strong> Hatched trim zones; distinct green/red markers.</li>
-                            <li><strong>High Contrast Mode:</strong> Bold waveform colors for projection.</li>
-                            <li><strong>Oversize Transport:</strong> Projection-visible GO/STOP/FADE controls.</li>
-                        </ul>
-                    </div>
-                    <div>
-                        <h4
-                            style="color: #ffd700; margin-bottom: 0.5rem; border-bottom: 1px solid #444; padding-bottom: 5px;">
-                            Management</h4>
-                        <ul style="line-height: 1.6; padding-left: 1.2rem;">
-                            <li><strong>Export Center:</strong> Generate printable PDF Cue Sheets and portable Zip
-                                packages.</li>
-                            <li><strong>Load Project Zip:</strong> Open an entire show (cue list and audio together) in
-                                one step.</li>
-                            <li><strong>Waveform Editor:</strong> Visual non-destructive trimming and fading.</li>
-                            <li><strong>Fully Offline:</strong> Every feature runs on the device, exports included
-                                (perfect for air-gapped booths).</li>
-                            <li><strong>Student Safe:</strong> "Help Mode" overlay preventing accidental edits.</li>
-                            <li><strong>Multi-Folder Pool:</strong> Multiple audio folders in one pool.</li>
-                            <li><strong>Consolidate to Folder:</strong> Package show and audio into one folder.</li>
-                            <li><strong>Audio Search:</strong> Filter audio files in real time.</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Theatre Cue Player Extension.
-             This section exists for two audiences: teachers deciding whether to wait for it,
-             and Google's OAuth reviewer, who reads this page to understand why the app asks
-             for Drive access. Keep the "How it uses Google Drive" wording accurate and in
-             step with manifest.json and privacy.html -- a homepage that disagrees with the
-             consent screen is a standard verification rejection. -->
-        <div class="version-card beta" style="text-align: left; margin-bottom: 2rem;">
-            <div style="text-align: center;">
+        <!-- PRIMARY: the extension. This is the product now; keep it first. The browser
+             build below is deliberately secondary. -->
+        <div class="version-card current hero-card" id="extension">
+            <div class="hero-head">
                 <div class="version-number">Theatre Cue Player Extension</div>
-                <span class="version-status status-beta">In testing — not yet on the Chrome Web Store</span>
+                <span class="version-status status-stable">Now on the Chrome Web Store</span>
+                <div style="margin: 1.4rem 0 0.2rem;">
+                    <a href="https://chromewebstore.google.com/detail/theatre-cue-player/meanilaokadjkgoflflcbpgpgcebamdm" class="btn cta-install" target="_blank" rel="noopener"><img
+                            src="images/tcp-icon-128.png" alt="" width="26" height="26">Add to Chrome
+                        &mdash; free</a>
+                </div>
+                <p class="price-note"><strong>Free for the whole 2026&ndash;27 school year.</strong><br>
+                    After that, only second-screen projection output will carry a fee. Audio-only
+                    shows stay free.</p>
             </div>
 
-            <p style="margin: 1.25rem 0;">A Chrome extension that adds <strong>video and projection</strong> to
-                everything the browser version already does. It is being tested in real productions now and will
-                be published to the Chrome Web Store once that testing is finished. Audio-only shows will always
-                be free.</p>
-
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+            <div class="feature-cols">
                 <div>
-                    <h4 style="color: #ffd700; margin-bottom: 0.5rem; border-bottom: 1px solid #444; padding-bottom: 5px;">
-                        Video &amp; Projection</h4>
-                    <ul style="line-height: 1.6; padding-left: 1.2rem;">
-                        <li><strong>Second-Screen Output:</strong> Clean full-screen projection to a projector or
-                            second monitor, black between cues.</li>
-                        <li><strong>Projection Mapping:</strong> Corner-pin warp and masking onto set pieces,
-                            scrims, and odd-shaped surfaces.</li>
-                        <li><strong>Video Cues:</strong> Fades, loops, trimming, playback rate, and pause/resume,
-                            fired from the same cue list as your audio.</li>
-                        <li><strong>Text Cues:</strong> Titles, supertitles, crawls and rolls.</li>
+                    <h4>Show Control</h4>
+                    <ul>
+                        <li><strong>One cue list, one GO button</strong> &mdash; a workflow a student
+                            learns in a rehearsal.</li>
+                        <li><strong>Multi-layer playback</strong> with overlapping audio instances.</li>
+                        <li><strong>Automation:</strong> auto-follow, auto-continue and infinite loops.</li>
+                        <li><strong>Fade cues</strong>, plus FADE ALL and STOP ALL for when something
+                            goes wrong.</li>
+                        <li><strong>Hotkeys</strong> for instant-fire sound effects.</li>
+                        <li><strong>Oversize transport</strong> and high-contrast mode for a dark booth.</li>
                     </ul>
                 </div>
                 <div>
-                    <h4 style="color: #ffd700; margin-bottom: 0.5rem; border-bottom: 1px solid #444; padding-bottom: 5px;">
-                        Shows That Travel</h4>
-                    <ul style="line-height: 1.6; padding-left: 1.2rem;">
-                        <li><strong>Two Storage Modes:</strong> A plain folder on the machine, or your own Google
-                            Drive — your choice, changeable at any time.</li>
-                        <li><strong>Cue Sheet Export:</strong> Generate a formatted Google Sheet of your cue list
-                            for the stage manager and the booth.</li>
-                        <li><strong>Built for Chromebooks:</strong> Runs offline once a show is open, so a dropped
-                            network can't stop a performance.</li>
-                        <li><strong>Sound Editor:</strong> Trim, fade, and clean up audio without leaving the app.</li>
+                    <h4>Video &amp; Projection</h4>
+                    <ul>
+                        <li><strong>Second-screen output</strong> &mdash; clean full-screen projection,
+                            black between cues.</li>
+                        <li><strong>Projection mapping:</strong> corner-pin warp and masking onto set
+                            pieces and scrims.</li>
+                        <li><strong>Video cues</strong> fired from the same list as your audio &mdash;
+                            fades, loops, trimming, playback rate.</li>
+                        <li><strong>Text cues:</strong> titles, supertitles, crawls and rolls.</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4>Shows That Travel</h4>
+                    <ul>
+                        <li><strong>Your storage, your choice</strong> &mdash; a plain folder, or your
+                            own Google Drive.</li>
+                        <li><strong>Cue sheets</strong> as a printable PDF, or a Google Sheet for the
+                            stage manager.</li>
+                        <li><strong>Zip a whole show</strong>, media included, in one step.</li>
+                        <li><strong>A real sound editor</strong> built in &mdash; EQ, reverb, delay,
+                            noise reduction, pitch and tempo change. Send the modified copy right
+                            back to your cue list.</li>
+                        <li><strong>Works offline</strong> once a show is open, so a dropped network
+                            can&rsquo;t stop a performance.</li>
+                        <li><strong>Help Mode</strong> locks the cue list so a student can&rsquo;t edit
+                            it by accident.</li>
                     </ul>
                 </div>
             </div>
 
-            <div style="margin-top: 1.5rem; padding: 1rem 1.25rem; background: rgba(0,0,0,0.25); border-radius: 8px;">
-                <h4 style="color: #ffd700; margin-bottom: 0.5rem;">How it uses Google Drive</h4>
-                <p style="line-height: 1.6;">Google Drive is <strong>optional</strong>. The extension works
-                    completely without it — in folder mode it never contacts Google, never asks you to sign in,
-                    and makes no network connections at all, which matters in districts where Drive is blocked.</p>
-                <p style="line-height: 1.6; margin-top: 0.75rem;">If you do connect it, shows are saved to
-                    <em>your own</em> Drive so a cue list follows you from the classroom to the booth, and cue
-                    sheets can be exported straight to Google Sheets. It asks for a <strong>single per-file
-                    permission</strong> (<code>drive.file</code>) which lets it read and write only the show
-                    files it creates and the cue sheets it makes for you. <strong>It cannot see anything else in
-                    your Drive</strong>, and there is no Theatre Cue Player server — nothing you make is sent to
-                    the developer. Full detail is in the <a href="/privacy" style="color: #ffd700;">privacy
-                    policy</a>.</p>
+            <!-- LOAD-BEARING. Google's OAuth verification checks that this page explains why the
+                 app asks for Drive access. Keep it accurate and in step with manifest.json and
+                 privacy.html. Do not remove. -->
+            <div class="drive-box">
+                <h4>How it uses Google Drive</h4>
+                <p>Google Drive is <strong>optional</strong>. The extension works completely without
+                    it &mdash; in folder mode it never contacts Google, never asks you to sign in,
+                    and makes no network connections at all, which matters in districts where Drive
+                    is blocked.</p>
+                <p>If you do connect it, shows are saved to <em>your own</em> Drive so a cue list
+                    follows you from the classroom to the booth, and cue sheets can be exported
+                    straight to Google Sheets. It asks for a <strong>single per-file
+                    permission</strong> (<code>drive.file</code>) which lets it read and write only
+                    the show files it creates and the cue sheets it makes for you. <strong>It cannot
+                    see anything else in your Drive</strong>, and there is no Theatre Cue Player
+                    server &mdash; nothing you make is sent to the developer. Full detail is in the
+                    <a href="/privacy" style="color: #ffd700;">privacy policy</a>.</p>
             </div>
+        </div>
+
+
+        <section class="origin">
+            <h2>Built in a classroom, for a classroom</h2>
+            <p>Theatre Cue Player started as a way to teach a room full of students the skills,
+                terminology and workflow of professional show control &mdash; without a professional
+                budget, and without a professional learning curve.</p>
+            <p>That shapes the whole thing. Cue types, fades, follows, geometry, warping: they are
+                named the way the industry names them, on purpose, so a student who runs a season
+                here can sit down in front of professional software and recognise what they are
+                looking at. The training is the point. The fact that it will also run your show is
+                what makes the training real.</p>
+        </section>
+
+        <!-- SECONDARY: the original browser build. Audio only, nothing to install. -->
+        <div class="version-card alt-card" id="browser">
+            <div style="text-align: center;">
+                <div class="version-number">Rather not install anything?</div>
+                <span class="version-status status-beta">Browser version &mdash; audio only</span>
+            </div>
+            <p style="margin: 1.1rem 0;">The original browser version runs from a link with nothing to
+                install. It does everything above <strong>except video and projection</strong>, which
+                makes it useful on a locked-down machine, or for trying the workflow in ten seconds.
+                It is also what the video guides below were recorded on.</p>
+            <div style="text-align: center;">
+                <a href="/theatrecueplayer_v1.1" class="btn" target="_blank">Open in the browser</a>
+            </div>
+        </div>
+
+        <h2 class="section-heading" id="tutorials">Video Guides: The Technical Director Series</h2>
+        <p class="section-sub">A six-part course on the cue-building workflow. Recorded on the browser
+            version &mdash; all of it applies to the extension too.</p>
+        <div class="video-section" style="margin-top: 0;">
+            <div class="video-grid">
+                    <a href="https://youtu.be/7qxbLyMS038" target="_blank" class="video-card">
+                        <img src="images/Slide1.PNG" alt="">
+                        <div class="video-info">
+                            <h3>1. Architecture &amp; Setup</h3>
+                            <p>Best practices for file management and PWA installation.</p>
+                        </div>
+                    </a>
+                    <a href="https://youtu.be/FN4YseZHZPk" target="_blank" class="video-card">
+                        <img src="images/Slide2.PNG" alt="">
+                        <div class="video-info">
+                            <h3>2. Building Cues</h3>
+                            <p>Targeting audio, renumbering, and auto-follow logic.</p>
+                        </div>
+                    </a>
+                    <a href="https://youtu.be/hBr9lKq1bBM" target="_blank" class="video-card">
+                        <img src="images/Slide3.PNG" alt="">
+                        <div class="video-info">
+                            <h3>3. Fades &amp; Pan Fades</h3>
+                            <p>Using the Toolbar, fade cues, and spatial audio panning.</p>
+                        </div>
+                    </a>
+                    <a href="https://youtu.be/nPaaMNhhtT8" target="_blank" class="video-card">
+                        <img src="images/Slide4.PNG" alt="">
+                        <div class="video-info">
+                            <h3>4. Waveform Editor</h3>
+                            <p>Non-destructive trimming and integrated fade curves.</p>
+                        </div>
+                    </a>
+                    <a href="https://youtu.be/dDFAU8ydF54" target="_blank" class="video-card">
+                        <img src="images/Slide5.PNG" alt="">
+                        <div class="video-info">
+                            <h3>5. Exporting &amp; Cue Sheets</h3>
+                            <p>Creating Zip packages and generating PDF cue sheets.</p>
+                        </div>
+                    </a>
+                    <a href="https://youtu.be/AIovD7ayCic" target="_blank" class="video-card">
+                        <img src="images/Slide6.PNG" alt="">
+                        <div class="video-info">
+                            <h3>6. Hotkeys &amp; Live Control</h3>
+                            <p>Handling ad-libs, overlaps, and mid-show additions.</p>
+                        </div>
+                    </a>
+            </div>
+        </div>
+
+
+        <h2 class="section-heading" id="next">Where this leads</h2>
+        <p class="section-sub">The vocabulary here is the industry&rsquo;s vocabulary. When your
+            students move on, these are the rooms they walk into &mdash; and they will already know
+            what the words mean.</p>
+        <div class="leads-grid">
+            <a href="https://qlab.app" target="_blank" rel="noopener" class="lead-card">
+                <h3>QLab</h3>
+                <p>The standard for theatrical sound, video and lighting cues. Mac only. If a student
+                    learns one professional tool, it is usually this one.</p>
+            </a>
+            <a href="https://www.showcuesystems.com" target="_blank" rel="noopener" class="lead-card">
+                <h3>Show Cue Systems</h3>
+                <p>Theatrical sound cue playback for Windows, and a long-standing alternative to
+                    QLab for programmes that are not on Macs.</p>
+            </a>
+            <a href="https://troikatronix.com" target="_blank" rel="noopener" class="lead-card">
+                <h3>Isadora</h3>
+                <p>Interactive media and projection for live performance, built around a visual
+                    patching workflow.</p>
+            </a>
+            <a href="https://resolume.com" target="_blank" rel="noopener" class="lead-card">
+                <h3>Resolume</h3>
+                <p>Projection mapping and live video, widely used in concert and event work.</p>
+            </a>
+            <a href="https://www.ableton.com/en/live/" target="_blank" rel="noopener" class="lead-card">
+                <h3>Ableton Live</h3>
+                <p>Music production and sound design. Where original underscoring and effects
+                    tend to get made.</p>
+            </a>
+        </div>
+
+        <h2 class="section-heading">Manual, lesson plans, and getting in touch</h2>
+        <p class="section-sub">Built by a technical theatre director for other people running school
+            productions. Tell me what&rsquo;s broken and what&rsquo;s missing.</p>
+        <div style="margin-bottom: 1rem;">
+            <a href="manual.md" class="btn" target="_blank">View Manual</a>
+            <a href="https://drive.google.com/drive/folders/1lpwQnVdo0U_jVGwgeWPI64bR0HO1g5Ud?usp=sharing"
+                class="btn" target="_blank">Lesson Plans</a>
+            <a href="https://www.youtube.com/playlist?list=PLkQulRclNF92Az4KSnG3tzp_z0suteEKs" class="btn"
+                target="_blank">All Video Tutorials</a>
+        </div>
+        <div style="margin-bottom: 1rem;">
+            <a href="https://docs.google.com/forms/d/e/1FAIpQLScR74COBgKIzvGrJzyVOfaqO4lBFAvtcPS96ul3YbShFxB8Ug/viewform?usp=sharing"
+                class="btn" style="background: #6c757d;" target="_blank">Bug Report / Feature Request</a>
+            <a href="https://docs.google.com/forms/d/e/1FAIpQLSd39m2mW22l95mEehJAsRt94zZbHMtMeaaMN_38mtkSNl0-9Q/viewform"
+                class="btn" style="background: #6c757d;" target="_blank">Join Mailing List</a>
         </div>
 
         <div class="roadmap">
             <h3>Roadmap</h3>
             <ul>
-                <li><strong>Browser Version:</strong> Stability and core audio features.</li>
-                <li><strong>Extension (in testing):</strong> Video cues, projection mapping, second-screen output,
-                    and optional Google Drive storage.</li>
-                <li><strong>Future Development:</strong> MIDI and OSC support.</li>
+                <li><strong>Shipped:</strong> the Chrome extension &mdash; video cues, projection
+                    mapping, second-screen output, and optional Google Drive storage.</li>
+                <li><strong>Browser version:</strong> stability and core audio features.</li>
+                <li><strong>Next:</strong> MIDI and OSC support.</li>
             </ul>
         </div>
 
         <div class="credits">
             <p><strong>Designed by:</strong> Kevin Patrick, Technical Theatre Arts Director</p>
             <p style="margin-top: 1rem; font-style: italic;">
-                <strong>License:</strong> Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International
-                License<br>
+                <strong>License:</strong> Creative Commons Attribution-NonCommercial-NoDerivatives 4.0
+                International License<br>
             </p>
             <p style="margin-top: 1rem; font-size: 0.85rem; color: #aaa;">
-                <a href="https://docs.google.com/forms/d/e/1FAIpQLSdz9wKHLn2PQcCU-8N5jq_rdBeXVd8M8tmhj46iXycdEufdGA/viewform" target="_blank" style="color: #aaa;">Join Mailing List</a>
-                &nbsp;·&nbsp;
+                <a href="https://docs.google.com/forms/d/e/1FAIpQLSd39m2mW22l95mEehJAsRt94zZbHMtMeaaMN_38mtkSNl0-9Q/viewform" target="_blank" style="color: #aaa;">Join Mailing List</a>
+                &nbsp;&middot;&nbsp;
                 <a href="https://docs.google.com/forms/d/e/1FAIpQLSeyvpchOr6dK1wZjcItejDsUZhRVJF3IysqjxFr5yZujn8HQQ/viewform" target="_blank" style="color: #aaa;">Unsubscribe</a>
-                &nbsp;·&nbsp;
+                &nbsp;&middot;&nbsp;
                 <!-- Required: Google's OAuth verification checks that the privacy policy is
                      reachable from the app's homepage. Do not remove this link. -->
                 <a href="/privacy" style="color: #aaa;">Privacy Policy</a>
-                &nbsp;·&nbsp;
+                &nbsp;&middot;&nbsp;
                 <a href="/terms" style="color: #aaa;">Terms of Service</a>
             </p>
         </div>
