@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tools — Theatre Cue Player</title>
-<meta name="description" content="Free browser tools for school theatre: check whether a sound or video file will play in your show, before you find out in tech.">
+<meta name="description" content="Free browser tools for school theatre: check whether a file will play in your show, and shrink oversized video so it projects smoothly.">
 <link rel="icon" type="image/png" sizes="32x32" href="images/tcp-icon-32.png">
 <link rel="icon" type="image/png" sizes="128x128" href="images/tcp-icon-128.png">
 <meta property="og:title" content="Theatre Cue Player — Tools">
@@ -19,50 +19,72 @@
     color: #fff; min-height: 100vh; padding: 2rem 1.25rem 4rem;
   }
   .wrap { max-width: 900px; margin: 0 auto; }
-  header { text-align: center; margin-bottom: 2.5rem; }
-  header img { width: 72px; height: 72px; }
-  h1 { color: #ffd700; font-size: 2rem; margin: .8rem 0 .4rem; }
+  header { text-align: center; margin-bottom: 2.2rem; }
+  header img { width: 68px; height: 68px; }
+  h1 { color: #ffd700; font-size: 1.9rem; margin: .7rem 0 .3rem; }
   .tagline { color: #ccc; }
-  .back { display: inline-block; margin-top: 1rem; color: #9aa0ff; text-decoration: none; font-size: .95rem; }
-  .back:hover { text-decoration: underline; }
+  .crumb { margin-bottom: 1.5rem; font-size: .95rem; color: #8d93a0; }
+  .crumb a { color: #9aa0ff; text-decoration: none; }
+  .crumb a:hover { text-decoration: underline; }
 
-  .tool {
-    background: rgba(255,255,255,.06); border: 1px solid #3f3f47;
-    border-radius: 12px; padding: 1.6rem; margin-bottom: 2rem;
+  /* --- index of tools ---------------------------------------------------- */
+  .tool-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); gap: 1.1rem; }
+  .tool-btn {
+    display: block; text-align: left; width: 100%; cursor: pointer; font: inherit; color: #fff;
+    background: rgba(255,255,255,.06); border: 1px solid #3f3f47; border-radius: 12px;
+    padding: 1.3rem 1.4rem; transition: transform .18s, border-color .18s, background .18s;
   }
-  .tool h2 { color: #ffd700; font-size: 1.3rem; margin-bottom: .4rem; }
-  .tool > p.lede { color: #bfc3cb; margin-bottom: 1.2rem; line-height: 1.6; }
+  .tool-btn:hover { transform: translateY(-4px); border-color: #ffd700; background: rgba(255,215,0,.07); }
+  .tool-btn h2 { color: #ffd700; font-size: 1.12rem; margin-bottom: .35rem; }
+  .tool-btn p { color: #bfc3cb; font-size: .92rem; line-height: 1.55; }
+
+  /* --- a single tool ----------------------------------------------------- */
+  .view[hidden] { display: none; }
+  .panel { background: rgba(255,255,255,.06); border: 1px solid #3f3f47; border-radius: 12px; padding: 1.6rem; }
+  .panel h2 { color: #ffd700; font-size: 1.35rem; margin-bottom: .4rem; }
+  .panel > p.lede { color: #bfc3cb; margin-bottom: 1.2rem; line-height: 1.6; }
 
   .drop {
-    border: 2px dashed #5a5a66; border-radius: 10px; padding: 2.2rem 1rem;
+    border: 2px dashed #5a5a66; border-radius: 10px; padding: 2rem 1rem;
     text-align: center; cursor: pointer; transition: all .2s; background: rgba(0,0,0,.2);
   }
   .drop:hover, .drop.over { border-color: #ffd700; background: rgba(255,215,0,.07); }
-  .drop strong { display: block; font-size: 1.05rem; margin-bottom: .3rem; }
-  .drop span { color: #9aa0ab; font-size: .92rem; }
+  .drop strong { display: block; font-size: 1.03rem; margin-bottom: .3rem; }
+  .drop span { color: #9aa0ab; font-size: .9rem; }
   input[type=file] { display: none; }
 
   .results { margin-top: 1.4rem; display: grid; gap: 1rem; }
   .card { background: #22222a; border: 1px solid #3f3f47; border-radius: 10px; overflow: hidden; }
   .card-head { padding: .85rem 1.1rem; display: flex; gap: .8rem; align-items: center; flex-wrap: wrap; }
   .card-name { font-weight: 600; flex: 1; min-width: 12rem; word-break: break-all; }
-  .verdict { font-size: .82rem; font-weight: 700; padding: .28rem .7rem; border-radius: 999px; white-space: nowrap; }
+  .verdict { font-size: .8rem; font-weight: 700; padding: .27rem .7rem; border-radius: 999px; white-space: nowrap; }
   .v-ok   { background: rgba(0,230,118,.16); color: #00e676; border: 1px solid rgba(0,230,118,.45); }
   .v-warn { background: rgba(255,176,32,.16); color: #ffcf66; border: 1px solid rgba(255,176,32,.5); }
   .v-bad  { background: rgba(255,90,90,.16);  color: #ff8b8b; border: 1px solid rgba(255,90,90,.45); }
   .card-body { padding: 0 1.1rem 1.1rem; }
-  .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px,1fr)); gap: .6rem 1.2rem; margin-bottom: .9rem; }
+  .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px,1fr)); gap: .6rem 1.2rem; margin-bottom: .9rem; }
   .fact { font-size: .88rem; }
-  .fact b { display: block; color: #8d93a0; font-weight: 600; font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; }
-  .advice { border-left: 3px solid #555; padding: .7rem .9rem; background: rgba(0,0,0,.25); border-radius: 0 8px 8px 0; line-height: 1.6; font-size: .93rem; }
-  .advice.ok   { border-left-color: #00e676; }
-  .advice.warn { border-left-color: #ffb020; }
-  .advice.bad  { border-left-color: #ff5a5a; }
+  .fact b { display: block; color: #8d93a0; font-weight: 600; font-size: .74rem; text-transform: uppercase; letter-spacing: .04em; }
+  .advice { border-left: 3px solid #555; padding: .7rem .9rem; background: rgba(0,0,0,.25); border-radius: 0 8px 8px 0; line-height: 1.6; font-size: .92rem; }
+  .advice.ok { border-left-color: #00e676; } .advice.warn { border-left-color: #ffb020; } .advice.bad { border-left-color: #ff5a5a; }
   .advice p + p { margin-top: .6rem; }
-  .advice a { color: #ffd700; }
-  .muted { color: #8d93a0; font-size: .86rem; margin-top: 1rem; }
+
+  .row { display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end; margin: 1.1rem 0; }
+  label.field { display: block; font-size: .8rem; color: #8d93a0; text-transform: uppercase; letter-spacing: .04em; margin-bottom: .3rem; }
+  select, button.go {
+    font: inherit; padding: .6rem .8rem; border-radius: 8px;
+    background: #2a2a33; color: #fff; border: 1px solid #4a4a55;
+  }
+  button.go { background: #28a745; border-color: #28a745; font-weight: 600; cursor: pointer; padding: .65rem 1.4rem; }
+  button.go:hover:not(:disabled) { background: #1e7e34; }
+  button.go:disabled { opacity: .5; cursor: default; }
+  .bar { height: 10px; background: #2a2a33; border-radius: 999px; overflow: hidden; margin: .8rem 0 .4rem; }
+  .bar > i { display: block; height: 100%; width: 0; background: #00e676; transition: width .2s; }
+  .note { color: #8d93a0; font-size: .87rem; line-height: 1.6; }
+  .dl { display: inline-block; margin-top: .8rem; background: #ffd700; color: #1a1a1a; font-weight: 700;
+        padding: .7rem 1.3rem; border-radius: 8px; text-decoration: none; }
   code { background: rgba(255,255,255,.09); padding: .1em .4em; border-radius: 4px; font-size: .92em; }
-  footer { text-align: center; color: #8d93a0; font-size: .88rem; margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid #3a3a42; }
+  footer { text-align: center; color: #8d93a0; font-size: .87rem; margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid #3a3a42; }
   footer a { color: #8d93a0; }
 </style>
 </head>
@@ -73,27 +95,86 @@
     <img src="images/tcp-icon-128.png" alt="Theatre Cue Player">
     <h1>Tools</h1>
     <p class="tagline">Free, and everything runs on your own machine.</p>
-    <a class="back" href="/">← Back to Theatre Cue Player</a>
   </header>
 
-  <section class="tool">
-    <h2>Will this file play in my show?</h2>
-    <p class="lede">Drop in a sound or video file and find out <em>now</em>, not in tech. This is the
-      question behind most "it worked on my laptop" disasters — a file that plays fine in one program
-      and refuses to open in the browser. Works for the extension, the browser version, and honestly
-      for anything else running in Chrome.</p>
+  <p class="crumb" id="crumb"><a href="/">Theatre Cue Player</a> &rsaquo; <strong>Tools</strong></p>
 
-    <div class="drop" id="drop" tabindex="0" role="button">
-      <strong>Drop files here, or click to choose</strong>
-      <span>Nothing is uploaded. Your files never leave this computer.</span>
+  <!-- ===================== INDEX ===================== -->
+  <div class="view" id="view-index">
+    <div class="tool-grid">
+      <button class="tool-btn" data-tool="check">
+        <h2>Will this file play?</h2>
+        <p>Drop in a sound or video file and find out before tech week — whether it plays, whether
+          it is too heavy to project smoothly, and what to do about it.</p>
+      </button>
+      <button class="tool-btn" data-tool="downsize">
+        <h2>Shrink a video</h2>
+        <p>Re-encode an oversized clip down to a sensible projection size, so it stops stuttering
+          on a Chromebook. Runs on this machine, nothing uploaded.</p>
+      </button>
     </div>
-    <input type="file" id="file" multiple accept="audio/*,video/*,image/*,.mkv,.avi,.wmv,.mov,.m4v,.flac,.aac,.wma">
+  </div>
 
-    <div class="results" id="results"></div>
-    <p class="muted">Checked in your own browser, so the answer is the truth for <em>this</em>
-      machine. A file that passes here plays here. If your booth computer is a different machine or
-      an older Chrome, check it there too.</p>
-  </section>
+  <!-- ===================== CHECKER ===================== -->
+  <div class="view" id="view-check" hidden>
+    <div class="panel">
+      <h2>Will this file play in my show?</h2>
+      <p class="lede">Find out <em>now</em>, not in tech. This is the question behind most
+        "it worked on my laptop" disasters — a file that plays fine in one program and refuses to
+        open in the browser.</p>
+      <div class="drop" id="c-drop" tabindex="0" role="button">
+        <strong>Drop files here, or click to choose</strong>
+        <span>Nothing is uploaded. Your files never leave this computer.</span>
+      </div>
+      <input type="file" id="c-file" multiple accept="audio/*,video/*,image/*,.mkv,.avi,.wmv,.mov,.m4v,.flac,.aac,.wma">
+      <div class="results" id="c-results"></div>
+      <p class="note" style="margin-top:1rem;">Checked in your own browser, so the answer is the
+        truth for <em>this</em> machine. If your booth computer is different, check it there too.</p>
+    </div>
+  </div>
+
+  <!-- ===================== DOWNSIZER ===================== -->
+  <div class="view" id="view-downsize" hidden>
+    <div class="panel">
+      <h2>Shrink a video</h2>
+      <p class="lede">A 4K clip will often play on your laptop and then stutter through the
+        projector. Re-encoding it near the size it is actually shown at fixes that, and nobody in
+        the audience can tell.</p>
+      <div class="drop" id="d-drop" tabindex="0" role="button">
+        <strong>Drop a video here, or click to choose</strong>
+        <span>Nothing is uploaded. It is encoded on this computer.</span>
+      </div>
+      <input type="file" id="d-file" accept="video/*">
+      <div id="d-panel" hidden>
+        <div class="results"><div class="card"><div class="card-body" style="padding-top:1.1rem;">
+          <div class="facts" id="d-facts"></div>
+        </div></div></div>
+        <div class="row">
+          <div>
+            <label class="field" for="d-size">Shrink to</label>
+            <select id="d-size">
+              <option value="1080">1080p — 1920 wide (standard projector)</option>
+              <option value="720">720p — 1280 wide (smaller / older projector)</option>
+              <option value="480">480p — 854 wide (tiny file, backdrop use)</option>
+            </select>
+          </div>
+          <div>
+            <label class="field" for="d-quality">Quality</label>
+            <select id="d-quality">
+              <option value="0.10">Higher — larger file</option>
+              <option value="0.06" selected>Balanced</option>
+              <option value="0.035">Smaller file</option>
+            </select>
+          </div>
+          <button class="go" id="d-go">Shrink it</button>
+        </div>
+        <div class="bar" id="d-bar" hidden><i></i></div>
+        <p class="note" id="d-status"></p>
+        <div id="d-out"></div>
+      </div>
+      <p class="note" id="d-warn" style="margin-top:1rem;"></p>
+    </div>
+  </div>
 
   <footer>
     <a href="/">Theatre Cue Player</a> &middot;
@@ -103,51 +184,39 @@
 </div>
 
 <script>
-/* ---------------------------------------------------------------------------
- * Media checker.
+/* ===========================================================================
+ * Tools page.
  *
- * Deliberately mirrors the extension's own thresholds so the two never disagree:
- *   unsupported : the browser cannot decode it   (video-engine.js `unsupported`)
- *   heavy       : decodes, but  vw*vh > 1920*1080  (video-engine.js:1883)
- *   audio exts  : mp3 wav ogg m4a aac flac        (audio-engine.js:16)
- * If those change in the extension, change them here.
+ * One page, hash-routed: /tools shows the index, /tools#downsize opens a tool.
+ * Deliberately not a stack of tools down one page — that turns into the endless
+ * scroll this site is trying to avoid — and deliberately not separate documents,
+ * so the back button and a shared link both behave without a reload.
  *
- * The honest limit, and the reason this is a checker rather than a converter:
- * a browser tool can only re-encode what the browser can already decode. The
- * files that most need converting — HEVC, .mkv — are precisely the ones Chrome
- * cannot open, so no in-browser converter could ever fix them. Saying so plainly
- * is more use to a teacher than a converter that fails on the hard cases.
- * ------------------------------------------------------------------------- */
+ * Nothing here uploads anything: this page makes no network requests of any kind.
+ * ========================================================================= */
 
-var AUDIO_EXTS = ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac'];
-var HEAVY_PIXELS = 1920 * 1080;
+var TOOLS = ['check', 'downsize'];
 
-var drop = document.getElementById('drop');
-var input = document.getElementById('file');
-var results = document.getElementById('results');
-
-drop.addEventListener('click', function () { input.click(); });
-drop.addEventListener('keydown', function (e) {
-  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); }
-});
-['dragenter', 'dragover'].forEach(function (t) {
-  drop.addEventListener(t, function (e) { e.preventDefault(); drop.classList.add('over'); });
-});
-['dragleave', 'drop'].forEach(function (t) {
-  drop.addEventListener(t, function (e) { e.preventDefault(); drop.classList.remove('over'); });
-});
-drop.addEventListener('drop', function (e) { handle(e.dataTransfer.files); });
-input.addEventListener('change', function () { handle(input.files); });
-
-function handle(list) {
-  results.innerHTML = '';
-  Array.prototype.slice.call(list || []).forEach(inspect);
+function show(name) {
+  var known = TOOLS.indexOf(name) >= 0;
+  document.getElementById('view-index').hidden = known;
+  TOOLS.forEach(function (t) { document.getElementById('view-' + t).hidden = (t !== name); });
+  document.getElementById('crumb').innerHTML = known
+    ? '<a href="/">Theatre Cue Player</a> &rsaquo; <a href="#" id="crumb-up">Tools</a> &rsaquo; <strong>'
+      + (name === 'check' ? 'Will this file play?' : 'Shrink a video') + '</strong>'
+    : '<a href="/">Theatre Cue Player</a> &rsaquo; <strong>Tools</strong>';
+  var up = document.getElementById('crumb-up');
+  if (up) up.addEventListener('click', function (e) { e.preventDefault(); location.hash = ''; });
+  window.scrollTo(0, 0);
 }
+function route() { show((location.hash || '').replace('#', '')); }
+window.addEventListener('hashchange', route);
+document.querySelectorAll('.tool-btn').forEach(function (b) {
+  b.addEventListener('click', function () { location.hash = b.dataset.tool; });
+});
 
-function ext(name) {
-  var m = /\.([a-z0-9]+)$/i.exec(name || '');
-  return m ? m[1].toLowerCase() : '';
-}
+/* --- shared helpers ------------------------------------------------------ */
+function ext(name) { var m = /\.([a-z0-9]+)$/i.exec(name || ''); return m ? m[1].toLowerCase() : ''; }
 function human(bytes) {
   if (!bytes) return '—';
   var u = ['B', 'KB', 'MB', 'GB'], i = 0, n = bytes;
@@ -165,29 +234,33 @@ function esc(s) {
     return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
   });
 }
+function wireDrop(dropEl, inputEl, onFiles) {
+  dropEl.addEventListener('click', function () { inputEl.click(); });
+  dropEl.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); inputEl.click(); }
+  });
+  ['dragenter', 'dragover'].forEach(function (t) {
+    dropEl.addEventListener(t, function (e) { e.preventDefault(); dropEl.classList.add('over'); });
+  });
+  ['dragleave', 'drop'].forEach(function (t) {
+    dropEl.addEventListener(t, function (e) { e.preventDefault(); dropEl.classList.remove('over'); });
+  });
+  dropEl.addEventListener('drop', function (e) { onFiles(e.dataTransfer.files); });
+  inputEl.addEventListener('change', function () { onFiles(inputEl.files); });
+}
 
-/* Load into a media element and see what the browser actually manages. canPlayType
-   is only a guess ("maybe" is a real answer it gives); actually decoding is the truth. */
+/* Load into a media element and see what the browser actually manages. canPlayType is
+   only a guess ("maybe" is a real answer it gives); decoding it is the truth. */
 function probe(file, kind) {
   return new Promise(function (resolve) {
-    var el = document.createElement(kind);
-    var url = URL.createObjectURL(file);
-    var done = false;
+    var el = document.createElement(kind), url = URL.createObjectURL(file), done = false;
     function finish(ok) {
       if (done) return;
       done = true;
-      var out = {
-        ok: ok,
-        duration: el.duration,
-        vw: el.videoWidth || 0,
-        vh: el.videoHeight || 0
-      };
-      URL.revokeObjectURL(url);
-      el.removeAttribute('src');
-      resolve(out);
+      var out = { ok: ok, duration: el.duration, vw: el.videoWidth || 0, vh: el.videoHeight || 0 };
+      URL.revokeObjectURL(url); el.removeAttribute('src'); resolve(out);
     }
-    el.preload = 'metadata';
-    el.muted = true;
+    el.preload = 'metadata'; el.muted = true;
     el.onloadedmetadata = function () { finish(true); };
     el.onerror = function () { finish(false); };
     setTimeout(function () { finish(false); }, 12000);   // some containers just hang
@@ -195,68 +268,68 @@ function probe(file, kind) {
   });
 }
 
+/* ===========================================================================
+ * TOOL 1 — checker
+ * Mirrors the extension's own thresholds so the two never disagree:
+ *   heavy      >1920x1080          (video-engine.js:1883)
+ *   audio exts mp3 wav ogg m4a aac flac  (audio-engine.js:16)
+ * If those change in the extension, change them here.
+ * ========================================================================= */
+var AUDIO_EXTS = ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac'];
+var HEAVY_PIXELS = 1920 * 1080;
+var cResults = document.getElementById('c-results');
+
+wireDrop(document.getElementById('c-drop'), document.getElementById('c-file'), function (list) {
+  cResults.innerHTML = '';
+  Array.prototype.slice.call(list || []).forEach(inspect);
+});
+
 function inspect(file) {
   var e = ext(file.name);
   var isVideoish = /^(video|image)\//.test(file.type) ||
-                   ['mp4','mov','m4v','webm','ogv','mkv','avi','wmv','jpg','jpeg','png'].indexOf(e) >= 0;
+    ['mp4','mov','m4v','webm','ogv','mkv','avi','wmv','jpg','jpeg','png'].indexOf(e) >= 0;
   var card = document.createElement('div');
   card.className = 'card';
   card.innerHTML = '<div class="card-head"><span class="card-name">' + esc(file.name) +
                    '</span><span class="verdict">checking…</span></div>';
-  results.appendChild(card);
-
+  cResults.appendChild(card);
   var isImage = /^image\//.test(file.type) || ['jpg','jpeg','png'].indexOf(e) >= 0;
-  if (isImage) return render(card, file, e, { ok: true, image: true });
-
+  if (isImage) return renderCheck(card, file, e, { ok: true, image: true });
   probe(file, isVideoish ? 'video' : 'audio').then(function (info) {
     info.isVideo = isVideoish;
-    render(card, file, e, info);
+    renderCheck(card, file, e, info);
   });
 }
 
-function render(card, file, e, info) {
-  var facts = [
-    ['File type', e ? '.' + e : (file.type || 'unknown')],
-    ['Size', human(file.size)]
-  ];
+function renderCheck(card, file, e, info) {
+  var facts = [['File type', e ? '.' + e : (file.type || 'unknown')], ['Size', human(file.size)]];
   if (!info.image) facts.push(['Length', clock(info.duration)]);
   if (info.vw) facts.push(['Resolution', info.vw + ' × ' + info.vh]);
-
   var verdict, cls, advice;
 
   if (info.image) {
     verdict = 'Ready to use'; cls = 'ok';
-    advice = '<p>Images work as video cues — use them for titles, backdrops and holds.</p>';
+    advice = '<p>Images work as video cues — titles, backdrops and holds.</p>';
   } else if (!info.ok) {
     verdict = "Won't play"; cls = 'bad';
     var why = ['mkv','avi','wmv','flv','ts','m2ts'].indexOf(e) >= 0
       ? 'A <code>.' + e + '</code> container is not something browsers open, whatever is inside it.'
-      : 'The browser could not decode this — usually an HEVC/H.265 video, or an unusual codec inside a familiar-looking file.';
-    advice =
-      '<p><strong>' + why + '</strong></p>' +
-      '<p>Convert it to <strong>H.264 MP4</strong> (for video) or <strong>WAV / MP3</strong> (for sound), ' +
-      'then use the converted copy in your show.</p>' +
-      '<p>This has to be done outside the browser, and that is not a limitation of this page: a ' +
-      'browser can only re-encode what it can already decode, so no web tool can rescue a file ' +
-      'Chrome cannot open in the first place. On a school machine, <strong>CloudConvert</strong> or ' +
-      '<strong>HandBrake</strong> (free, on a Windows or Mac machine) will both do it. Ask your tech ' +
-      'department if you cannot install anything.</p>';
+      : 'The browser could not decode this — usually HEVC/H.265, or an unusual codec inside a familiar-looking file.';
+    advice = '<p><strong>' + why + '</strong></p>' +
+      '<p>Convert it to <strong>H.264 MP4</strong> (video) or <strong>WAV / MP3</strong> (sound), then use the copy.</p>' +
+      '<p>That has to happen outside the browser, and it is not a limitation of this page: a browser can only ' +
+      're-encode what it can already decode, so no web tool can rescue a file Chrome cannot open. ' +
+      '<strong>CloudConvert</strong> works on a locked-down machine; <strong>HandBrake</strong> is free on Windows or Mac.</p>';
   } else if (info.isVideo && info.vw && (info.vw * info.vh) > HEAVY_PIXELS) {
     verdict = 'Plays, but heavy'; cls = 'warn';
-    advice =
-      '<p>This decodes fine, but at <strong>' + info.vw + ' × ' + info.vh + '</strong> it is bigger than ' +
-      '1080p. High-resolution and 60&nbsp;fps clips can stutter when projected, especially on a Chromebook.</p>' +
-      '<p>Re-export it near the size it will actually be shown at — usually <strong>1920 × 1080</strong> ' +
-      'or smaller — as <strong>H.264 MP4</strong>. Nobody in the audience can tell the difference, and ' +
-      'it will play smoothly.</p>';
+    advice = '<p>Decodes fine, but at <strong>' + info.vw + ' × ' + info.vh + '</strong> it is bigger than 1080p. ' +
+      'High-resolution and 60&nbsp;fps clips stutter when projected, especially on a Chromebook.</p>' +
+      '<p><a href="#downsize" style="color:#ffd700;font-weight:600;">Shrink it with the other tool →</a></p>';
   } else if (!info.isVideo && AUDIO_EXTS.indexOf(e) < 0) {
     verdict = 'Risky'; cls = 'warn';
-    advice =
-      '<p>This decoded here, but <code>.' + e + '</code> is not one of the formats Theatre Cue Player ' +
-      'lists as reliable (<code>mp3 wav ogg m4a aac flac</code>). Browser support for anything else ' +
-      'varies by machine, so it may fail on your booth computer even though it worked here.</p>' +
-      '<p>Convert it to <strong>WAV</strong> for the show. WAV is uncompressed, so it always decodes ' +
-      'instantly — which is what you want when a cue has to fire on time.</p>';
+    advice = '<p>It decoded here, but <code>.' + e + '</code> is not one of the formats Theatre Cue Player treats as ' +
+      'reliable (<code>mp3 wav ogg m4a aac flac</code>). Support varies by machine, so it may fail in the booth.</p>' +
+      '<p>Convert it to <strong>WAV</strong> for the show — uncompressed, so it always decodes instantly.</p>';
   } else {
     verdict = 'Good to go'; cls = 'ok';
     advice = info.isVideo
@@ -264,13 +337,162 @@ function render(card, file, e, info) {
       : '<p>Decodes cleanly and is a format the app treats as reliable. Nothing to do.</p>';
   }
 
-  card.querySelector('.verdict').className = 'verdict v-' + (cls === 'ok' ? 'ok' : cls === 'warn' ? 'warn' : 'bad');
-  card.querySelector('.verdict').textContent = verdict;
-  card.insertAdjacentHTML('beforeend',
-    '<div class="card-body"><div class="facts">' +
+  var v = card.querySelector('.verdict');
+  v.className = 'verdict v-' + cls;
+  v.textContent = verdict;
+  card.insertAdjacentHTML('beforeend', '<div class="card-body"><div class="facts">' +
     facts.map(function (f) { return '<div class="fact"><b>' + f[0] + '</b>' + esc(f[1]) + '</div>'; }).join('') +
     '</div><div class="advice ' + cls + '">' + advice + '</div></div>');
 }
+
+/* ===========================================================================
+ * TOOL 2 — downsizer
+ *
+ * Canvas + MediaRecorder rather than WebCodecs, on purpose: WebCodecs gives you
+ * encoded chunks and no container, so an MP4 would need a muxer bundled in.
+ * MediaRecorder writes a finished file. The cost is that it records in REAL
+ * TIME, which the UI says plainly instead of looking hung.
+ *
+ * MP4 if this browser can write it, WebM otherwise. Both play in Theatre Cue
+ * Player, so the fallback is not a downgrade for the intended use.
+ *
+ * This can only ever handle files the browser can already decode — see the note
+ * in the checker. That is exactly the "plays, but heavy" case, which is the one
+ * worth fixing anyway.
+ * ========================================================================= */
+var dFile = null, dInfo = null;
+var dPanel = document.getElementById('d-panel');
+var dFacts = document.getElementById('d-facts');
+var dBar = document.getElementById('d-bar');
+var dStatus = document.getElementById('d-status');
+var dOut = document.getElementById('d-out');
+var dGo = document.getElementById('d-go');
+
+function pickMime() {
+  if (typeof MediaRecorder === 'undefined') return null;
+  var candidates = [
+    'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+    'video/mp4',
+    'video/webm;codecs=vp9,opus',
+    'video/webm;codecs=vp8,opus',
+    'video/webm'
+  ];
+  for (var i = 0; i < candidates.length; i++) {
+    if (MediaRecorder.isTypeSupported(candidates[i])) return candidates[i];
+  }
+  return null;
+}
+var D_MIME = pickMime();
+document.getElementById('d-warn').innerHTML = D_MIME
+  ? 'Encoding happens in real time, so a two-minute clip takes about two minutes. Leave this tab ' +
+    'open and in front while it runs — browsers throttle background tabs and it will crawl. ' +
+    'Output format: <code>' + (D_MIME.indexOf('mp4') >= 0 ? 'MP4' : 'WebM') + '</code>' +
+    (D_MIME.indexOf('mp4') >= 0 ? '.' : ' — this browser cannot write MP4, and WebM plays in Theatre Cue Player just as well.')
+  : '<strong>This browser cannot record video</strong>, so shrinking will not work here. Try Chrome on a desktop.';
+
+wireDrop(document.getElementById('d-drop'), document.getElementById('d-file'), function (list) {
+  var f = (list || [])[0];
+  if (!f) return;
+  dOut.innerHTML = ''; dStatus.textContent = ''; dBar.hidden = true;
+  dStatus.textContent = 'Reading…';
+  probe(f, 'video').then(function (info) {
+    if (!info.ok || !info.vw) {
+      dPanel.hidden = true;
+      dStatus.innerHTML = '<strong style="color:#ff8b8b;">This browser cannot decode that file</strong>, ' +
+        'so it cannot be shrunk here either. Check it with the other tool for what to do.';
+      return;
+    }
+    dFile = f; dInfo = info;
+    dFacts.innerHTML = [
+      ['File', f.name], ['Size', human(f.size)],
+      ['Length', clock(info.duration)], ['Resolution', info.vw + ' × ' + info.vh]
+    ].map(function (x) { return '<div class="fact"><b>' + x[0] + '</b>' + esc(x[1]) + '</div>'; }).join('');
+    dPanel.hidden = false;
+    dStatus.textContent = '';
+    dGo.disabled = !D_MIME;
+  });
+});
+
+dGo.addEventListener('click', function () { shrink().catch(function (e) {
+  dStatus.innerHTML = '<strong style="color:#ff8b8b;">Failed:</strong> ' + esc(e.message || e);
+  dGo.disabled = false;
+}); });
+
+function targetSize(srcW, srcH, targetH) {
+  if (srcH <= targetH) return null;                 // already small enough
+  var w = Math.round(srcW * (targetH / srcH));
+  return { w: w - (w % 2), h: targetH - (targetH % 2) };   // even dimensions encode cleanly
+}
+
+async function shrink() {
+  var wantH = parseInt(document.getElementById('d-size').value, 10);
+  var bpp = parseFloat(document.getElementById('d-quality').value);
+  var dim = targetSize(dInfo.vw, dInfo.vh, wantH);
+  if (!dim) {
+    dStatus.textContent = 'That clip is already ' + dInfo.vh + ' tall — smaller than the size you chose. Nothing to do.';
+    return;
+  }
+
+  dGo.disabled = true; dOut.innerHTML = '';
+  dBar.hidden = false; dBar.firstElementChild.style.width = '0%';
+  dStatus.textContent = 'Encoding… this runs in real time, so about ' + clock(dInfo.duration) + '.';
+
+  var video = document.createElement('video');
+  video.src = URL.createObjectURL(dFile);
+  video.muted = true;                 // mutes playback; the captured track still carries audio
+  video.playsInline = true;
+  await new Promise(function (r, j) { video.onloadeddata = r; video.onerror = function () { j(new Error('could not open the video')); }; });
+
+  var canvas = document.createElement('canvas');
+  canvas.width = dim.w; canvas.height = dim.h;
+  var ctx = canvas.getContext('2d', { alpha: false });
+
+  var stream = canvas.captureStream();
+  // Carry the original audio across if the browser will give it to us.
+  try {
+    var src = video.captureStream ? video.captureStream() : null;
+    if (src) src.getAudioTracks().forEach(function (t) { stream.addTrack(t); });
+  } catch (e) { /* video-only output is still useful */ }
+
+  var bitrate = Math.round(dim.w * dim.h * 30 * bpp);
+  var rec = new MediaRecorder(stream, { mimeType: D_MIME, videoBitsPerSecond: bitrate });
+  var chunks = [];
+  rec.ondataavailable = function (e) { if (e.data && e.data.size) chunks.push(e.data); };
+  var stopped = new Promise(function (r) { rec.onstop = r; });
+
+  var draw = function () {
+    ctx.drawImage(video, 0, 0, dim.w, dim.h);
+    var pct = dInfo.duration ? Math.min(100, (video.currentTime / dInfo.duration) * 100) : 0;
+    dBar.firstElementChild.style.width = pct.toFixed(1) + '%';
+    if (!video.ended) schedule();
+  };
+  var schedule = video.requestVideoFrameCallback
+    ? function () { video.requestVideoFrameCallback(draw); }
+    : function () { requestAnimationFrame(draw); };
+
+  rec.start(1000);
+  await video.play();
+  schedule();
+  await new Promise(function (r) { video.onended = r; });
+  rec.stop();
+  await stopped;
+
+  URL.revokeObjectURL(video.src);
+  var blob = new Blob(chunks, { type: D_MIME.split(';')[0] });
+  var outExt = D_MIME.indexOf('mp4') >= 0 ? 'mp4' : 'webm';
+  var base = dFile.name.replace(/\.[^.]+$/, '');
+  var url = URL.createObjectURL(blob);
+
+  dBar.firstElementChild.style.width = '100%';
+  var saved = dFile.size ? Math.round((1 - blob.size / dFile.size) * 100) : 0;
+  dStatus.innerHTML = 'Done — <strong>' + dim.w + ' × ' + dim.h + '</strong>, ' + human(blob.size) +
+    (saved > 0 ? ' (' + saved + '% smaller)' : '') + '.';
+  dOut.innerHTML = '<a class="dl" download="' + esc(base) + '-' + dim.h + 'p.' + outExt + '" href="' + url + '">Download the shrunk video</a>' +
+    '<p class="note" style="margin-top:.8rem;">Play it once before you rely on it, then assign it to your cue.</p>';
+  dGo.disabled = false;
+}
+
+route();
 </script>
 </body>
 </html>
