@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tools — Theatre Cue Player</title>
+<meta name="description" content="Free browser tools for school theatre: check whether a sound or video file will play in your show, before you find out in tech.">
+<link rel="icon" type="image/png" sizes="32x32" href="images/tcp-icon-32.png">
+<link rel="icon" type="image/png" sizes="128x128" href="images/tcp-icon-128.png">
+<meta property="og:title" content="Theatre Cue Player — Tools">
+<meta property="og:description" content="Free browser tools for school theatre.">
+<meta property="og:image" content="https://theatrecueplayer.app/images/tcp-icon-512.png">
+<meta property="og:url" content="https://theatrecueplayer.app/tools">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+    color: #fff; min-height: 100vh; padding: 2rem 1.25rem 4rem;
+  }
+  .wrap { max-width: 900px; margin: 0 auto; }
+  header { text-align: center; margin-bottom: 2.5rem; }
+  header img { width: 72px; height: 72px; }
+  h1 { color: #ffd700; font-size: 2rem; margin: .8rem 0 .4rem; }
+  .tagline { color: #ccc; }
+  .back { display: inline-block; margin-top: 1rem; color: #9aa0ff; text-decoration: none; font-size: .95rem; }
+  .back:hover { text-decoration: underline; }
+
+  .tool {
+    background: rgba(255,255,255,.06); border: 1px solid #3f3f47;
+    border-radius: 12px; padding: 1.6rem; margin-bottom: 2rem;
+  }
+  .tool h2 { color: #ffd700; font-size: 1.3rem; margin-bottom: .4rem; }
+  .tool > p.lede { color: #bfc3cb; margin-bottom: 1.2rem; line-height: 1.6; }
+
+  .drop {
+    border: 2px dashed #5a5a66; border-radius: 10px; padding: 2.2rem 1rem;
+    text-align: center; cursor: pointer; transition: all .2s; background: rgba(0,0,0,.2);
+  }
+  .drop:hover, .drop.over { border-color: #ffd700; background: rgba(255,215,0,.07); }
+  .drop strong { display: block; font-size: 1.05rem; margin-bottom: .3rem; }
+  .drop span { color: #9aa0ab; font-size: .92rem; }
+  input[type=file] { display: none; }
+
+  .results { margin-top: 1.4rem; display: grid; gap: 1rem; }
+  .card { background: #22222a; border: 1px solid #3f3f47; border-radius: 10px; overflow: hidden; }
+  .card-head { padding: .85rem 1.1rem; display: flex; gap: .8rem; align-items: center; flex-wrap: wrap; }
+  .card-name { font-weight: 600; flex: 1; min-width: 12rem; word-break: break-all; }
+  .verdict { font-size: .82rem; font-weight: 700; padding: .28rem .7rem; border-radius: 999px; white-space: nowrap; }
+  .v-ok   { background: rgba(0,230,118,.16); color: #00e676; border: 1px solid rgba(0,230,118,.45); }
+  .v-warn { background: rgba(255,176,32,.16); color: #ffcf66; border: 1px solid rgba(255,176,32,.5); }
+  .v-bad  { background: rgba(255,90,90,.16);  color: #ff8b8b; border: 1px solid rgba(255,90,90,.45); }
+  .card-body { padding: 0 1.1rem 1.1rem; }
+  .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px,1fr)); gap: .6rem 1.2rem; margin-bottom: .9rem; }
+  .fact { font-size: .88rem; }
+  .fact b { display: block; color: #8d93a0; font-weight: 600; font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; }
+  .advice { border-left: 3px solid #555; padding: .7rem .9rem; background: rgba(0,0,0,.25); border-radius: 0 8px 8px 0; line-height: 1.6; font-size: .93rem; }
+  .advice.ok   { border-left-color: #00e676; }
+  .advice.warn { border-left-color: #ffb020; }
+  .advice.bad  { border-left-color: #ff5a5a; }
+  .advice p + p { margin-top: .6rem; }
+  .advice a { color: #ffd700; }
+  .muted { color: #8d93a0; font-size: .86rem; margin-top: 1rem; }
+  code { background: rgba(255,255,255,.09); padding: .1em .4em; border-radius: 4px; font-size: .92em; }
+  footer { text-align: center; color: #8d93a0; font-size: .88rem; margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid #3a3a42; }
+  footer a { color: #8d93a0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <img src="images/tcp-icon-128.png" alt="Theatre Cue Player">
+    <h1>Tools</h1>
+    <p class="tagline">Free, and everything runs on your own machine.</p>
+    <a class="back" href="/">← Back to Theatre Cue Player</a>
+  </header>
+
+  <section class="tool">
+    <h2>Will this file play in my show?</h2>
+    <p class="lede">Drop in a sound or video file and find out <em>now</em>, not in tech. This is the
+      question behind most "it worked on my laptop" disasters — a file that plays fine in one program
+      and refuses to open in the browser. Works for the extension, the browser version, and honestly
+      for anything else running in Chrome.</p>
+
+    <div class="drop" id="drop" tabindex="0" role="button">
+      <strong>Drop files here, or click to choose</strong>
+      <span>Nothing is uploaded. Your files never leave this computer.</span>
+    </div>
+    <input type="file" id="file" multiple accept="audio/*,video/*,image/*,.mkv,.avi,.wmv,.mov,.m4v,.flac,.aac,.wma">
+
+    <div class="results" id="results"></div>
+    <p class="muted">Checked in your own browser, so the answer is the truth for <em>this</em>
+      machine. A file that passes here plays here. If your booth computer is a different machine or
+      an older Chrome, check it there too.</p>
+  </section>
+
+  <footer>
+    <a href="/">Theatre Cue Player</a> &middot;
+    <a href="/privacy">Privacy Policy</a> &middot;
+    <a href="/terms">Terms of Service</a>
+  </footer>
+</div>
+
+<script>
+/* ---------------------------------------------------------------------------
+ * Media checker.
+ *
+ * Deliberately mirrors the extension's own thresholds so the two never disagree:
+ *   unsupported : the browser cannot decode it   (video-engine.js `unsupported`)
+ *   heavy       : decodes, but  vw*vh > 1920*1080  (video-engine.js:1883)
+ *   audio exts  : mp3 wav ogg m4a aac flac        (audio-engine.js:16)
+ * If those change in the extension, change them here.
+ *
+ * The honest limit, and the reason this is a checker rather than a converter:
+ * a browser tool can only re-encode what the browser can already decode. The
+ * files that most need converting — HEVC, .mkv — are precisely the ones Chrome
+ * cannot open, so no in-browser converter could ever fix them. Saying so plainly
+ * is more use to a teacher than a converter that fails on the hard cases.
+ * ------------------------------------------------------------------------- */
+
+var AUDIO_EXTS = ['mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac'];
+var HEAVY_PIXELS = 1920 * 1080;
+
+var drop = document.getElementById('drop');
+var input = document.getElementById('file');
+var results = document.getElementById('results');
+
+drop.addEventListener('click', function () { input.click(); });
+drop.addEventListener('keydown', function (e) {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); }
+});
+['dragenter', 'dragover'].forEach(function (t) {
+  drop.addEventListener(t, function (e) { e.preventDefault(); drop.classList.add('over'); });
+});
+['dragleave', 'drop'].forEach(function (t) {
+  drop.addEventListener(t, function (e) { e.preventDefault(); drop.classList.remove('over'); });
+});
+drop.addEventListener('drop', function (e) { handle(e.dataTransfer.files); });
+input.addEventListener('change', function () { handle(input.files); });
+
+function handle(list) {
+  results.innerHTML = '';
+  Array.prototype.slice.call(list || []).forEach(inspect);
+}
+
+function ext(name) {
+  var m = /\.([a-z0-9]+)$/i.exec(name || '');
+  return m ? m[1].toLowerCase() : '';
+}
+function human(bytes) {
+  if (!bytes) return '—';
+  var u = ['B', 'KB', 'MB', 'GB'], i = 0, n = bytes;
+  while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
+  return (i ? n.toFixed(1) : n) + ' ' + u[i];
+}
+function clock(sec) {
+  if (!isFinite(sec) || sec <= 0) return '—';
+  var m = Math.floor(sec / 60), s = Math.round(sec % 60);
+  if (s === 60) { m++; s = 0; }
+  return m + ':' + (s < 10 ? '0' : '') + s;
+}
+function esc(s) {
+  return String(s).replace(/[&<>"]/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+  });
+}
+
+/* Load into a media element and see what the browser actually manages. canPlayType
+   is only a guess ("maybe" is a real answer it gives); actually decoding is the truth. */
+function probe(file, kind) {
+  return new Promise(function (resolve) {
+    var el = document.createElement(kind);
+    var url = URL.createObjectURL(file);
+    var done = false;
+    function finish(ok) {
+      if (done) return;
+      done = true;
+      var out = {
+        ok: ok,
+        duration: el.duration,
+        vw: el.videoWidth || 0,
+        vh: el.videoHeight || 0
+      };
+      URL.revokeObjectURL(url);
+      el.removeAttribute('src');
+      resolve(out);
+    }
+    el.preload = 'metadata';
+    el.muted = true;
+    el.onloadedmetadata = function () { finish(true); };
+    el.onerror = function () { finish(false); };
+    setTimeout(function () { finish(false); }, 12000);   // some containers just hang
+    el.src = url;
+  });
+}
+
+function inspect(file) {
+  var e = ext(file.name);
+  var isVideoish = /^(video|image)\//.test(file.type) ||
+                   ['mp4','mov','m4v','webm','ogv','mkv','avi','wmv','jpg','jpeg','png'].indexOf(e) >= 0;
+  var card = document.createElement('div');
+  card.className = 'card';
+  card.innerHTML = '<div class="card-head"><span class="card-name">' + esc(file.name) +
+                   '</span><span class="verdict">checking…</span></div>';
+  results.appendChild(card);
+
+  var isImage = /^image\//.test(file.type) || ['jpg','jpeg','png'].indexOf(e) >= 0;
+  if (isImage) return render(card, file, e, { ok: true, image: true });
+
+  probe(file, isVideoish ? 'video' : 'audio').then(function (info) {
+    info.isVideo = isVideoish;
+    render(card, file, e, info);
+  });
+}
+
+function render(card, file, e, info) {
+  var facts = [
+    ['File type', e ? '.' + e : (file.type || 'unknown')],
+    ['Size', human(file.size)]
+  ];
+  if (!info.image) facts.push(['Length', clock(info.duration)]);
+  if (info.vw) facts.push(['Resolution', info.vw + ' × ' + info.vh]);
+
+  var verdict, cls, advice;
+
+  if (info.image) {
+    verdict = 'Ready to use'; cls = 'ok';
+    advice = '<p>Images work as video cues — use them for titles, backdrops and holds.</p>';
+  } else if (!info.ok) {
+    verdict = "Won't play"; cls = 'bad';
+    var why = ['mkv','avi','wmv','flv','ts','m2ts'].indexOf(e) >= 0
+      ? 'A <code>.' + e + '</code> container is not something browsers open, whatever is inside it.'
+      : 'The browser could not decode this — usually an HEVC/H.265 video, or an unusual codec inside a familiar-looking file.';
+    advice =
+      '<p><strong>' + why + '</strong></p>' +
+      '<p>Convert it to <strong>H.264 MP4</strong> (for video) or <strong>WAV / MP3</strong> (for sound), ' +
+      'then use the converted copy in your show.</p>' +
+      '<p>This has to be done outside the browser, and that is not a limitation of this page: a ' +
+      'browser can only re-encode what it can already decode, so no web tool can rescue a file ' +
+      'Chrome cannot open in the first place. On a school machine, <strong>CloudConvert</strong> or ' +
+      '<strong>HandBrake</strong> (free, on a Windows or Mac machine) will both do it. Ask your tech ' +
+      'department if you cannot install anything.</p>';
+  } else if (info.isVideo && info.vw && (info.vw * info.vh) > HEAVY_PIXELS) {
+    verdict = 'Plays, but heavy'; cls = 'warn';
+    advice =
+      '<p>This decodes fine, but at <strong>' + info.vw + ' × ' + info.vh + '</strong> it is bigger than ' +
+      '1080p. High-resolution and 60&nbsp;fps clips can stutter when projected, especially on a Chromebook.</p>' +
+      '<p>Re-export it near the size it will actually be shown at — usually <strong>1920 × 1080</strong> ' +
+      'or smaller — as <strong>H.264 MP4</strong>. Nobody in the audience can tell the difference, and ' +
+      'it will play smoothly.</p>';
+  } else if (!info.isVideo && AUDIO_EXTS.indexOf(e) < 0) {
+    verdict = 'Risky'; cls = 'warn';
+    advice =
+      '<p>This decoded here, but <code>.' + e + '</code> is not one of the formats Theatre Cue Player ' +
+      'lists as reliable (<code>mp3 wav ogg m4a aac flac</code>). Browser support for anything else ' +
+      'varies by machine, so it may fail on your booth computer even though it worked here.</p>' +
+      '<p>Convert it to <strong>WAV</strong> for the show. WAV is uncompressed, so it always decodes ' +
+      'instantly — which is what you want when a cue has to fire on time.</p>';
+  } else {
+    verdict = 'Good to go'; cls = 'ok';
+    advice = info.isVideo
+      ? '<p>Decodes cleanly and is a sensible size for projection. Nothing to do.</p>'
+      : '<p>Decodes cleanly and is a format the app treats as reliable. Nothing to do.</p>';
+  }
+
+  card.querySelector('.verdict').className = 'verdict v-' + (cls === 'ok' ? 'ok' : cls === 'warn' ? 'warn' : 'bad');
+  card.querySelector('.verdict').textContent = verdict;
+  card.insertAdjacentHTML('beforeend',
+    '<div class="card-body"><div class="facts">' +
+    facts.map(function (f) { return '<div class="fact"><b>' + f[0] + '</b>' + esc(f[1]) + '</div>'; }).join('') +
+    '</div><div class="advice ' + cls + '">' + advice + '</div></div>');
+}
+</script>
+</body>
+</html>
