@@ -28,13 +28,17 @@ goes wrong in a school show.
 4. **Always a way out.** The mark at the top goes home, the "Theatre Cue Player home" button says
    so out loud, and inside a tool there is an "All tools" button at the top and a "Done — back to
    all tools" button at the foot. Nobody should need the browser back button.
-5. **Honest about limits.** A browser can only re-encode what it can already decode. When a tool
-   can't help, it says so and names something that can (CloudConvert, HandBrake).
+5. **Honest about limits.** When a tool can't help, it says so and names something that can
+   (CloudConvert, HandBrake). Note that FFmpeg raised the ceiling: the page can now open plenty
+   the browser cannot, so do not repeat the old line about a browser only handling what it can
+   already decode — it is no longer true.
 6. **Vanilla.** No framework, no build step. Same as the extension.
 
 ## 3. How the page is wired
 
-Single file, single `<script>`, no dependencies today.
+Single file, single `<script>`. The only dependency is the FFmpeg engine in `vendor/ffmpeg/`,
+reached by dynamic `import()` so the page still loads instantly for anyone who never opens a
+tool that needs it.
 
 - `TOOLS` — an object at the top of the script: `id → title`. **Adding a tool is one line here.**
 - `show(name)` / `route()` — hash router. Toggles `#view-index` against `#view-<id>`, rebuilds the
@@ -71,6 +75,7 @@ The checker mirrors the extension's own numbers so the two never disagree. If th
 |---|---|---|---|
 | Will this file play? | `#check` | native media elements | Decodes the file for real; verdicts: Good to go / Plays, but heavy / Risky / Won't play. Handles images too. |
 | Trim a video | `#trim` | ffmpeg.wasm, stream copy | Lossless and about a second, whatever the length. Cut lands on the nearest keyframe and the tool says so. See §4.1. |
+| Get the sound out of a video | `#rip` | ffmpeg.wasm | Copies the audio track out untouched (`-vn -c:a copy`), or re-records as WAV/MP3. Reads the stream first so it can name the codec and detect a silent clip. See §4.2. |
 | Shrink a video | `#downsize` | Canvas + `MediaRecorder` | Real-time encode (a 2-min clip takes 2 min) — the UI says so. MP4 when the browser can write it, WebM otherwise. Only works on files the browser can already decode. |
 
 ### 4.1 The trimmer, and the FFmpeg decision that came with it
@@ -120,8 +125,37 @@ where the browser refuses the engine fetch and every video fails identically wit
 up front, says so, and disables the button; there is a test for the message. To try the page
 locally, run `npx http-server . -p 8765 -c-1` and use the localhost address.
 
-**Follow-ups this unlocks** (the 32 MB is already paid for): audio extractor, GIF→MP4, a real
-converter for the "Won't play" verdict, and a non-real-time rewrite of the downsizer.
+**Follow-ups this unlocks** (the 32 MB is already paid for): ~~audio extractor~~ (done, §4.2),
+GIF→MP4, a real converter for the "Won't play" verdict, and a non-real-time rewrite of the
+downsizer.
+
+### 4.2 The audio ripper
+
+Built 2026-08-15, on the engine the trimmer already paid for.
+
+**Was there something to borrow?** Asked, and looked. There is plenty —
+[ffmpeg-web](https://github.com/dinoosauro/ffmpeg-web),
+[xsukax-Audio-Converter](https://github.com/xsukax/xsukax-Audio-Converter),
+[extract-audio-from-video](https://github.com/CasinoLove/extract-audio-from-video) — but all of
+them are *applications*, not components: each ships its own framework and its own UI aimed at
+general users. The reusable part of every one of them is FFmpeg, which is already vendored and
+credited here. What was borrowed is the approach (copy the track, do not re-encode); what was
+written is the ~60 lines of wrapper, which is the part that has to speak to a teacher and
+therefore cannot come off a shelf. **Keep applying that test:** borrow engines, write wrappers.
+
+- **Two passes.** `ffmpeg -i input` with no output file makes FFmpeg print the stream list and
+  exit non-zero — expected, and caught. The log is parsed for `Stream #x:y: Audio: <codec>`.
+  That is the only reliable way to know what the audio is, and the only way to know whether
+  there is any: **a silent video is a real case** and gets a plain explanation rather than an
+  error.
+- **Opus is written to `.ogg`, not `.opus`.** `.ogg` is on the extension's reliable-format
+  list and `.opus` is not, so copying to `.opus` would make the checker contradict the ripper.
+- **Codecs with no web-playable home** (AC-3, DTS) are converted to WAV instead of copied, and
+  the page says why rather than silently doing something different from what was asked.
+- **MP3 and WAV are available** — `libmp3lame` and `pcm_s16le` are both in the vendored core
+  (verified by inspecting the wasm, not assumed).
+- `loadFFmpeg(say)` takes a status callback so each tool owns its own status line and bar. It
+  used to write into the trimmer's markup directly; do not reintroduce that.
 
 ## 5. Candidate list
 
@@ -133,7 +167,7 @@ comes up in a school show. Nothing below is committed.
 | Tool | Engine | Why |
 |---|---|---|
 | ~~Trim a video~~ | ffmpeg.wasm | **Built 2026-08-15** — see §4.1. |
-| **Pull the sound out of a video** | ffmpeg.wasm | Common ask: a sound effect that only exists inside an MP4. Cheap now the engine is in. |
+| ~~Pull the sound out of a video~~ | ffmpeg.wasm | **Built 2026-08-15** — see §4.2. |
 | **Title / slate cards** | Canvas + `FontFace` | Blackouts, act cards, intermission countdowns, surtitles. No file input at all, so nothing can go wrong. Fonts must be bundled — no Google Fonts CDN call (rule 1). |
 | **Projector test grid** | Canvas | Pairs directly with the extension's surface warping. Pure generator, tiny. |
 | **Split & merge script PDFs** | `pdf-lib` (MIT) | Real stage-management chore, and pdf-lib is small and clean. |
@@ -215,6 +249,9 @@ all. It now asserts the actual numbers.
 
 ## 8. History
 
+- **2026-08-15** — Audio ripper (§4.2), sharing the trimmer's engine. Duplicate-id guard added
+  to the tests after `t-out` was used twice, which built the trimmer's download link inside a
+  drag handle.
 - **2026-08-15** — Trimmer built on ffmpeg.wasm (§4.1); GPL accepted and attributed; Playwright
   coverage for the tools page; checker copy corrected where FFmpeg made it untrue.
 - **2026-08-15** — Logo links home; explicit home button; "All tools" button in the nav and at the

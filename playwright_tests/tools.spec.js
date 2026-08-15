@@ -16,7 +16,14 @@ const BASE = 'http://127.0.0.1:8765/tools.html';
 test.describe('tools page', () => {
   test('the index offers a way home, and no way "up" until you are in a tool', async ({ page }) => {
     await page.goto(BASE);
-    await expect(page.locator('.tool-btn')).toHaveCount(3);
+    // Every tool the router knows about has a card, and every card points at a real tool.
+    // Asserted against the router rather than a hardcoded count, so adding a tool does not
+    // fail this test for the wrong reason.
+    const { known, cards } = await page.evaluate(() => ({
+      known: Object.keys(window.TOOLS),
+      cards: [...document.querySelectorAll('.tool-btn')].map(b => b.dataset.tool),
+    }));
+    expect(cards.slice().sort()).toEqual(known.slice().sort());
     await expect(page.locator('.home-link')).toHaveAttribute('href', '/');
     await expect(page.locator('.pagenav a.navbtn')).toHaveAttribute('href', '/');
     await expect(page.locator('#up-btn')).toBeHidden();
@@ -63,6 +70,86 @@ test.describe('tools page', () => {
       return [...seen].filter(([, n]) => n > 1).map(([id]) => id);
     });
     expect(dupes).toEqual([]);
+  });
+
+  /** Builds a WebM in the page and hands it to a file input. withSound=false makes a silent one. */
+  async function makeClip(page, inputId, { seconds = 4, withSound = true, name = 'clip.webm' } = {}) {
+    return page.evaluate(async ({ inputId, seconds, withSound, name }) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 320; canvas.height = 240;
+      const ctx = canvas.getContext('2d');
+      const stream = canvas.captureStream(30);
+      if (withSound) {
+        const ac = new AudioContext();
+        const osc = ac.createOscillator();
+        const dest = ac.createMediaStreamDestination();
+        osc.frequency.value = 440; osc.connect(dest); osc.start();
+        dest.stream.getAudioTracks().forEach(t => stream.addTrack(t));
+      }
+      const rec = new MediaRecorder(stream, { mimeType: 'video/webm' });
+      const chunks = [];
+      rec.ondataavailable = e => e.data.size && chunks.push(e.data);
+      const stopped = new Promise(r => { rec.onstop = r; });
+      rec.start();
+      const start = performance.now();
+      await new Promise(done => {
+        (function frame() {
+          const t = performance.now() - start;
+          ctx.fillStyle = `hsl(${(t / 20) % 360} 70% 45%)`; ctx.fillRect(0, 0, 320, 240);
+          if (t < seconds * 1000) requestAnimationFrame(frame); else done();
+        })();
+      });
+      rec.stop(); await stopped;
+      const dt = new DataTransfer();
+      dt.items.add(new File(chunks, name, { type: 'video/webm' }));
+      const input = document.getElementById(inputId);
+      input.files = dt.files;
+      input.dispatchEvent(new Event('change'));
+    }, { inputId, seconds, withSound, name });
+  }
+
+  test('pulls the sound out of a video', async ({ page, browserName }) => {
+    test.skip(browserName !== 'chromium', 'needs MediaRecorder to build its own fixture');
+    test.setTimeout(180_000);
+    await page.goto(BASE + '#rip');
+    await makeClip(page, 'r-file', { name: 'storm-effect.webm' });
+
+    await expect(page.locator('#r-panel')).toBeVisible({ timeout: 20_000 });
+    await page.locator('#r-go').click();
+    await expect(page.locator('#r-result a.dl')).toBeVisible({ timeout: 150_000 });
+
+    // A copy, named for what was actually inside — MediaRecorder writes Opus, which the page
+    // deliberately puts in .ogg rather than .opus so it matches the extension's reliable list.
+    await expect(page.locator('#r-status')).toContainText('Opus');
+    await expect(page.locator('#r-status')).toContainText('copied out, not re-recorded');
+    await expect(page.locator('#r-result a.dl')).toHaveAttribute('download', 'storm-effect.ogg');
+
+    const audio = await page.evaluate(async () => {
+      const blob = await (await fetch(document.querySelector('#r-result a.dl').href)).blob();
+      const el = document.createElement('audio');
+      el.src = URL.createObjectURL(blob);
+      const dur = await new Promise(r => {
+        el.onloadedmetadata = () => r(el.duration);
+        el.onerror = () => r(-1);
+        setTimeout(() => r(-2), 8000);
+      });
+      return { size: blob.size, duration: dur };
+    });
+    expect(audio.size).toBeGreaterThan(1000);
+    expect(audio.duration).toBeGreaterThan(1);      // real, playable audio — not an empty file
+  });
+
+  test('a silent video is explained, not reported as a failure', async ({ page, browserName }) => {
+    test.skip(browserName !== 'chromium', 'needs MediaRecorder to build its own fixture');
+    test.setTimeout(180_000);
+    await page.goto(BASE + '#rip');
+    await makeClip(page, 'r-file', { withSound: false, name: 'silent.webm' });
+
+    await expect(page.locator('#r-panel')).toBeVisible({ timeout: 20_000 });
+    await page.locator('#r-go').click();
+    await expect(page.locator('#r-status')).toContainText('no sound in this video', { timeout: 150_000 });
+    await expect(page.locator('#r-status')).toContainText('Nothing has gone wrong');
+    await expect(page.locator('#r-go')).toBeEnabled();
   });
 
   test('a deep link opens the tool directly', async ({ page }) => {

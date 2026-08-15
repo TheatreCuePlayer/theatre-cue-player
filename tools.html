@@ -161,6 +161,11 @@
         <p>Cut the dead air off the front and back of a clip. Nothing is re-encoded, so it is
           instant and the picture is untouched.</p>
       </button>
+      <button class="tool-btn" data-tool="rip">
+        <h2>Get the sound out of a video</h2>
+        <p>Lift the music or the sound effect out of a video clip and save it as an audio file
+          you can put on a cue.</p>
+      </button>
       <button class="tool-btn" data-tool="downsize">
         <h2>Shrink a video</h2>
         <p>Re-encode an oversized clip down to a sensible projection size, so it stops stuttering
@@ -234,6 +239,45 @@
       </div>
 
       <p class="note" id="t-warn" style="margin-top:1rem;"></p>
+    </div>
+    <div class="exit-row"><button class="navbtn to-index">&larr; Done — back to all tools</button></div>
+  </div>
+
+  <!-- ===================== AUDIO RIPPER ===================== -->
+  <div class="view" id="view-rip" hidden>
+    <div class="panel">
+      <h2>Get the sound out of a video</h2>
+      <p class="lede">Sometimes the effect you need only exists inside a video — a clip off a
+        phone, a song under a trailer. This lifts the sound track out whole and hands it back as
+        an audio file you can drop straight onto a cue.</p>
+      <div class="drop" id="r-drop" tabindex="0" role="button">
+        <strong>Drop a video here, or click to choose</strong>
+        <span>Nothing is uploaded. The sound is pulled out on this computer.</span>
+      </div>
+      <input type="file" id="r-file" accept="video/*">
+
+      <div id="r-panel" hidden>
+        <div class="results"><div class="card"><div class="card-body" style="padding-top:1.1rem;">
+          <div class="facts" id="r-facts"></div>
+        </div></div></div>
+        <div class="row">
+          <div>
+            <label class="field" for="r-format">Save the sound as</label>
+            <select id="r-format">
+              <option value="copy" selected>Exactly as it is — instant, nothing lost</option>
+              <option value="wav">WAV — uncompressed, always plays</option>
+              <option value="mp3">MP3 — smaller file</option>
+            </select>
+          </div>
+          <button class="go" id="r-go">Get the sound</button>
+        </div>
+        <p class="note" id="r-hint"></p>
+        <div class="bar" id="r-bar" hidden><i></i></div>
+        <p class="note" id="r-status"></p>
+        <div id="r-result"></div>
+      </div>
+
+      <p class="note" id="r-warn" style="margin-top:1rem;"></p>
     </div>
     <div class="exit-row"><button class="navbtn to-index">&larr; Done — back to all tools</button></div>
   </div>
@@ -313,6 +357,7 @@
 var TOOLS = {
   check:    'Will this file play?',
   trim:     'Trim a video',
+  rip:      'Get the sound out of a video',
   downsize: 'Shrink a video'
 };
 var BASE_TITLE = 'Tools — Theatre Cue Player';
@@ -585,17 +630,17 @@ async function fetchCore(url, expectedBytes, onBytes) {
   return URL.createObjectURL(blob);
 }
 
-function loadFFmpeg() {
+/* say(text, pct) — whichever tool is asking gets to own its own status line and bar, so the
+   engine loader is shared without either tool reaching into the other's markup. */
+function loadFFmpeg(say) {
   if (ffLoading) return ffLoading;
   ffLoading = (async function () {
-    tStatus.textContent = 'Getting the video engine ready…';
-    tBar.hidden = false;
+    say('Getting the video engine ready…', 0);
     var wasmURL = await fetchCore(abs(FF_BASE + 'core/ffmpeg-core.wasm'), FF_WASM_SIZE, function (got, total) {
-      tBar.firstElementChild.style.width = Math.min(100, (got / total) * 100).toFixed(1) + '%';
-      tStatus.textContent = 'Downloading the video engine — ' + human(got) + ' of ' + human(total) +
-        '. This happens once on this computer.';
+      say('Downloading the video engine — ' + human(got) + ' of ' + human(total) +
+        '. This happens once on this computer.', (got / total) * 100);
     });
-    tStatus.textContent = 'Starting the video engine…';
+    say('Starting the video engine…', 100);
     var mod = await import(abs(FF_BASE + 'esm/index.js'));
     var ff = new mod.FFmpeg();
     await ff.load({ coreURL: abs(FF_BASE + 'core/ffmpeg-core.js'), wasmURL: wasmURL });
@@ -723,7 +768,11 @@ async function trim() {
   if (tOut - tIn < 0.2) { tStatus.textContent = 'That selection is too short to make a clip out of.'; return; }
 
   tGo.disabled = true; tOutBox.innerHTML = '';
-  await loadFFmpeg();
+  await loadFFmpeg(function (text, pct) {
+    tStatus.textContent = text;
+    tBar.hidden = false;
+    tBar.firstElementChild.style.width = pct.toFixed(1) + '%';
+  });
 
   var want = tOut - tIn;
   tBar.hidden = false; tBar.firstElementChild.style.width = '0%';
@@ -776,7 +825,177 @@ async function trim() {
 }
 
 /* ===========================================================================
- * TOOL 3 — downsizer
+ * TOOL 3 — audio ripper
+ *
+ * Same engine as the trimmer, same instinct: copy the existing audio packets out
+ * rather than decode and re-encode them.
+ *     ffmpeg -i input -vn -c:a copy output
+ * Nothing is lost and it takes about a second. WAV and MP3 are offered as well,
+ * because a copy hands back whatever the video happened to contain, and sometimes
+ * "always plays" beats "identical".
+ *
+ * Two passes: one to read what is inside (which is also how we know whether there
+ * is any sound at all), then one to write the file. The first is nearly free and it
+ * means the student is told "this is AAC, 48 kHz, stereo" rather than being handed a
+ * file with a mystery extension.
+ * ========================================================================= */
+var rFile = null, rInfo = null, rAudio = null;
+var rPanel  = document.getElementById('r-panel');
+var rFacts  = document.getElementById('r-facts');
+var rBar    = document.getElementById('r-bar');
+var rStatus = document.getElementById('r-status');
+var rResult = document.getElementById('r-result');
+var rHint   = document.getElementById('r-hint');
+var rGo     = document.getElementById('r-go');
+var rFormat = document.getElementById('r-format');
+
+document.getElementById('r-warn').innerHTML = FROM_DISK ? DISK_MSG :
+  'This uses the same 32&nbsp;MB engine as the trimmer, so if you have trimmed something on ' +
+  'this computer already it is still cached and this will be quick.';
+
+/* Which container each codec can be copied into untouched. Opus goes into .ogg rather than
+   .opus on purpose: .ogg is on the list of extensions Theatre Cue Player treats as reliable
+   and .opus is not, so the tools would otherwise contradict each other. */
+var COPY_HOME = {
+  aac: 'm4a', mp3: 'mp3', flac: 'flac', vorbis: 'ogg', opus: 'ogg',
+  alac: 'm4a', pcm_s16le: 'wav', pcm_s24le: 'wav', pcm_f32le: 'wav'
+};
+var FRIENDLY = {
+  aac: 'AAC', mp3: 'MP3', flac: 'FLAC', vorbis: 'Ogg Vorbis', opus: 'Opus',
+  alac: 'Apple Lossless', ac3: 'Dolby Digital', eac3: 'Dolby Digital Plus', dts: 'DTS'
+};
+
+function rSay(text, pct) {
+  rStatus.innerHTML = text;
+  if (pct === null || pct === undefined) { rBar.hidden = true; return; }
+  rBar.hidden = false;
+  rBar.firstElementChild.style.width = Math.max(0, Math.min(100, pct)).toFixed(1) + '%';
+}
+
+wireDrop(document.getElementById('r-drop'), document.getElementById('r-file'), function (list) {
+  var f = (list || [])[0];
+  if (!f) return;
+  rResult.innerHTML = ''; rBar.hidden = true; rStatus.textContent = 'Reading…';
+  rAudio = null;
+  probe(f, 'video').then(function (info) {
+    if (f.size > TOO_BIG) {
+      rPanel.hidden = true;
+      rStatus.innerHTML = '<strong style="color:#ff8b8b;">That file is ' + human(f.size) + '</strong>, ' +
+        'which is too large to open inside a browser tab.';
+      return;
+    }
+    rFile = f; rInfo = info;
+    rFacts.innerHTML = [
+      ['File', f.name], ['Size', human(f.size)], ['Length', clock(info.duration)]
+    ].map(function (x) { return '<div class="fact"><b>' + x[0] + '</b>' + esc(x[1]) + '</div>'; }).join('');
+    rPanel.hidden = false;
+    rStatus.textContent = '';
+    // What is actually inside is not known until the engine reads it, and loading the engine
+    // is a 32 MB download — so it waits for the button rather than firing on a drop.
+    rHint.textContent = 'Press the button and the sound will be lifted out as it is, without ' +
+      'being re-recorded. What it turns out to be is shown when it is done.';
+    rGo.disabled = FROM_DISK;
+  });
+});
+
+rFormat.addEventListener('change', function () {
+  rHint.textContent = rFormat.value === 'copy'
+    ? 'Copied out untouched — instant, and identical to the sound in the video.'
+    : (rFormat.value === 'wav'
+      ? 'Re-recorded as WAV: a big file, but uncompressed and certain to play anywhere.'
+      : 'Re-recorded as MP3: smaller, and fine for anything but the most exposed music cue.');
+});
+
+rGo.addEventListener('click', function () {
+  rip().catch(function (e) {
+    rSay('<strong style="color:#ff8b8b;">That did not work —</strong> ' + esc(e.message || e), null);
+    rGo.disabled = false;
+  });
+});
+
+/* Read the input's stream list out of FFmpeg's own log. This is the only way to know what
+   the audio is, and the only reliable way to know whether there is any. */
+async function readAudioStream(inName) {
+  var lines = [];
+  var collect = function (m) { lines.push(m.message); };
+  ffmpeg.on('log', collect);
+  // No output file: ffmpeg reports what it found and exits non-zero. That is expected.
+  try { await ffmpeg.exec(['-hide_banner', '-i', inName]); } catch (e) { /* expected */ }
+  ffmpeg.off('log', collect);
+
+  var text = lines.join('\n');
+  var m = /Stream #\d+:\d+.*?: Audio: ([a-z0-9_]+)/i.exec(text);
+  if (!m) return null;
+  var rate = /(\d+) Hz/.exec(text);
+  var layout = /Audio:.*?\d+ Hz, ([a-z0-9.() ]+?),/i.exec(text);
+  return { codec: m[1].toLowerCase(), rate: rate ? +rate[1] : 0, layout: layout ? layout[1] : '' };
+}
+
+async function rip() {
+  rGo.disabled = true; rResult.innerHTML = '';
+  await loadFFmpeg(rSay);
+
+  var srcExt = ext(rFile.name) || 'mp4';
+  var inName = 'in.' + srcExt;
+  rSay('Reading the video…', 5);
+  await ffmpeg.writeFile(inName, new Uint8Array(await rFile.arrayBuffer()));
+
+  rAudio = await readAudioStream(inName);
+  if (!rAudio) {
+    try { await ffmpeg.deleteFile(inName); } catch (e) { /* best effort */ }
+    rGo.disabled = false;
+    throw new Error('there is no sound in this video at all — it is a silent clip. ' +
+      'Nothing has gone wrong; there is simply nothing to take out.');
+  }
+
+  var want = rFormat.value;
+  var codecName = FRIENDLY[rAudio.codec] || rAudio.codec.toUpperCase();
+  var outExt, args;
+  if (want === 'wav') {
+    outExt = 'wav'; args = ['-vn', '-c:a', 'pcm_s16le'];
+  } else if (want === 'mp3') {
+    outExt = 'mp3'; args = ['-vn', '-c:a', 'libmp3lame', '-q:a', '2'];
+  } else {
+    outExt = COPY_HOME[rAudio.codec];
+    if (!outExt) {
+      // Copying would produce a file nothing in a booth can open. Say so and use WAV.
+      outExt = 'wav'; args = ['-vn', '-c:a', 'pcm_s16le'];
+      rHint.innerHTML = 'This video\'s sound is <strong>' + esc(codecName) + '</strong>, which ' +
+        'browsers cannot play on its own, so it has been turned into WAV instead of copied.';
+    } else {
+      args = ['-vn', '-c:a', 'copy'];
+    }
+  }
+
+  var outName = 'out.' + outExt;
+  rSay('Getting the sound out…', 10);
+  ffmpeg.on('progress', function (p) {
+    var done = (p && p.time ? p.time / 1e6 : 0) / (rInfo.duration || 1);
+    rSay('Getting the sound out…', 10 + done * 90);
+  });
+
+  var code = await ffmpeg.exec(['-i', inName].concat(args).concat([outName]));
+  if (code !== 0) throw new Error('the sound could not be written out of this video. ' +
+    'Try WAV, which works from anything the engine can open.');
+
+  var data = await ffmpeg.readFile(outName);
+  var blob = new Blob([data.buffer || data], { type: outExt === 'mp3' ? 'audio/mpeg' : 'audio/' + outExt });
+  try { await ffmpeg.deleteFile(inName); await ffmpeg.deleteFile(outName); } catch (e) { /* best effort */ }
+
+  var base = rFile.name.replace(/\.[^.]+$/, '');
+  var url = URL.createObjectURL(blob);
+  var was = codecName + (rAudio.rate ? ', ' + (rAudio.rate / 1000) + ' kHz' : '') +
+            (rAudio.layout ? ', ' + rAudio.layout : '');
+  rSay('Done — <strong>' + outExt.toUpperCase() + '</strong>, ' + human(blob.size) + '. ' +
+    'The sound in this video was <strong>' + esc(was) + '</strong>' +
+    (args.indexOf('copy') >= 0 ? ', and that is exactly what you have — copied out, not re-recorded.' : '.'), 100);
+  rResult.innerHTML = '<a class="dl" download="' + esc(base) + '.' + outExt + '" href="' + url + '">Download the sound</a>' +
+    '<p class="note" style="margin-top:.8rem;">Give it a listen before you rely on it, then assign it to your cue.</p>';
+  rGo.disabled = false;
+}
+
+/* ===========================================================================
+ * TOOL 4 — downsizer
  *
  * Canvas + MediaRecorder rather than WebCodecs, on purpose: WebCodecs gives you
  * encoded chunks and no container, so an MP4 would need a muxer bundled in.
