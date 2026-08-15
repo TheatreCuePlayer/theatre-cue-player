@@ -77,7 +77,10 @@
   .v-bad  { background: rgba(255,90,90,.16);  color: #ff8b8b; border: 1px solid rgba(255,90,90,.45); }
   .card-body { padding: 0 1.1rem 1.1rem; }
   .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px,1fr)); gap: .6rem 1.2rem; margin-bottom: .9rem; }
-  .fact { font-size: .88rem; }
+  /* min-width:0 because a grid item will not shrink below its content, so a long filename
+     spills over the column beside it instead of wrapping — it lands on top of Size. Paired
+     with overflow-wrap so a name with no spaces in it still breaks rather than overflowing. */
+  .fact { font-size: .88rem; min-width: 0; overflow-wrap: anywhere; }
   .fact b { display: block; color: #8d93a0; font-weight: 600; font-size: .74rem; text-transform: uppercase; letter-spacing: .04em; }
   .advice { border-left: 3px solid #555; padding: .7rem .9rem; background: rgba(0,0,0,.25); border-radius: 0 8px 8px 0; line-height: 1.6; font-size: .92rem; }
   .advice.ok { border-left-color: #00e676; } .advice.warn { border-left-color: #ffb020; } .advice.bad { border-left-color: #ff5a5a; }

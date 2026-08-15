@@ -139,6 +139,28 @@ test.describe('tools page', () => {
     expect(audio.duration).toBeGreaterThan(1);      // real, playable audio — not an empty file
   });
 
+  test('a long filename wraps instead of landing on top of the size', async ({ page, browserName }) => {
+    test.skip(browserName !== 'chromium', 'needs MediaRecorder to build its own fixture');
+    test.setTimeout(120_000);
+    await page.goto(BASE + '#rip');
+    await makeClip(page, 'r-file', {
+      seconds: 2,
+      // No spaces on purpose. A name with spaces wraps on its own; it is the unbroken run —
+      // the way exports and phone cameras actually name things — that overflows the column.
+      name: 'Act2_Scene4_thunderstorm_with_distant_church_bells_FINAL_v3_donotdelete.webm',
+    });
+    await expect(page.locator('#r-panel')).toBeVisible({ timeout: 20_000 });
+
+    // Measure content against box, NOT bounding boxes against each other. The grid keeps each
+    // cell exactly where it belongs; it is the TEXT that paints outside its cell and over the
+    // neighbour, which no getBoundingClientRect comparison can see. Unfixed, the File cell here
+    // is 257px wide holding 517px of filename.
+    const spills = await page.locator('#r-facts .fact').evaluateAll(els => els
+      .map(e => ({ text: e.textContent.slice(0, 24), over: e.scrollWidth - e.clientWidth }))
+      .filter(x => x.over > 1));
+    expect(spills).toEqual([]);
+  });
+
   test('a silent video is explained, not reported as a failure', async ({ page, browserName }) => {
     test.skip(browserName !== 'chromium', 'needs MediaRecorder to build its own fixture');
     test.setTimeout(180_000);
