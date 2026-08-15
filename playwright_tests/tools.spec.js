@@ -174,6 +174,67 @@ test.describe('tools page', () => {
     await expect(page.locator('#r-go')).toBeEnabled();
   });
 
+  test('the slate exports a real PNG at the chosen size', async ({ page }) => {
+    await page.goto(BASE + '#slate');
+    await page.locator('#s-text').fill('Act Two\nTwo years later');
+    await page.locator('#s-res').selectOption('1280x720');
+
+    // The preview must not be blank — it is the thing people judge the tool by.
+    const inked = await page.evaluate(() => {
+      const c = document.getElementById('s-canvas');
+      const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+      let lit = 0;
+      for (let i = 0; i < d.length; i += 4) if (d[i] > 200 && d[i + 3] > 200) lit++;
+      return lit;
+    });
+    expect(inked).toBeGreaterThan(500);         // real light-coloured text on a dark card
+
+    const download = await Promise.all([
+      page.waitForEvent('download'),
+      page.locator('#s-go').click(),
+    ]).then(([d]) => d);
+    expect(download.suggestedFilename()).toBe('Act Two 1280x720.png');
+
+    // Decode what was actually saved, rather than trusting the button.
+    const saved = await page.evaluate(async () => {
+      const blob = await (await fetch(document.querySelector('#s-result a.dl').href)).blob();
+      const bmp = await createImageBitmap(blob);
+      return { type: blob.type, w: bmp.width, h: bmp.height, size: blob.size };
+    });
+    expect(saved).toMatchObject({ type: 'image/png', w: 1280, h: 720 });
+    expect(saved.size).toBeGreaterThan(1000);
+  });
+
+  test('a blocked font network still produces a card', async ({ page }) => {
+    // A school network that blocks Google is the normal case, not the edge case. The tool has
+    // to degrade to the system face and say so — never fail, never silently lie to the preview.
+    await page.route('https://fonts.googleapis.com/**', r => r.abort());
+    await page.goto(BASE + '#slate');
+    await page.locator('#s-font').selectOption('Cinzel');
+
+    await expect(page.locator('#s-status')).toContainText('Could not fetch Cinzel');
+    await expect(page.locator('#s-status')).toContainText('still works');
+
+    const download = await Promise.all([
+      page.waitForEvent('download'),
+      page.locator('#s-go').click(),
+    ]).then(([d]) => d);
+    expect(download.suggestedFilename()).toContain('.png');
+  });
+
+  test('an empty slate is a plain colour card, not a crash', async ({ page }) => {
+    await page.goto(BASE + '#slate');
+    await page.locator('#s-presets [data-preset="blackout"]').click();
+    await expect(page.locator('#s-text')).toHaveValue('');
+    const black = await page.evaluate(() => {
+      const c = document.getElementById('s-canvas');
+      const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+      for (let i = 0; i < d.length; i += 4) if (d[i] || d[i + 1] || d[i + 2]) return false;
+      return true;
+    });
+    expect(black).toBe(true);
+  });
+
   test('a deep link opens the tool directly', async ({ page }) => {
     await page.goto(BASE + '#downsize');
     await expect(page.locator('#view-downsize')).toBeVisible();

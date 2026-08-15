@@ -18,8 +18,15 @@ goes wrong in a school show.
 
 ## 2. Ground rules
 
-1. **Nothing is uploaded.** The page makes no network requests with user files, ever. That claim
-   is on the page, so it has to stay true — including for any library we add.
+1. **No user file ever leaves the machine.** Not uploaded, not posted, not sent to an API —
+   ever, by any tool, including any library added later. That claim is printed on the page and
+   it has to stay literally true.
+
+   Fetching *assets the page needs* is a different thing and is allowed (decided 2026-08-15):
+   Google Fonts for the slate generator is fine, because a font request carries no user data.
+   The rule is about the direction of travel — things may come down to the user, nothing about
+   the user goes up. The extension and the browser build are stricter and are unaffected by
+   this; do not relax them on the strength of it.
 2. **Plain language.** Written for a non-technical teacher and a 13-year-old. No codecs, bitrates
    or container jargon in the visible copy unless the sentence explains itself. Say what to do
    next, not what went wrong internally.
@@ -75,6 +82,7 @@ The checker mirrors the extension's own numbers so the two never disagree. If th
 |---|---|---|---|
 | Will this file play? | `#check` | native media elements | Decodes the file for real; verdicts: Good to go / Plays, but heavy / Risky / Won't play. Handles images too. |
 | Trim a video | `#trim` | ffmpeg.wasm, stream copy | Lossless and about a second, whatever the length. Cut lands on the nearest keyframe and the tool says so. See §4.1. |
+| Make a title card | `#slate` | Canvas + Google Fonts | Act titles, blackouts, intermission, warnings, surtitles. Live preview, PNG at projector resolutions. No engine, instant. See §4.3. |
 | Get the sound out of a video | `#rip` | ffmpeg.wasm | Copies the audio track out untouched (`-vn -c:a copy`), or re-records as WAV/MP3. Reads the stream first so it can name the codec and detect a silent clip. See §4.2. |
 | Shrink a video | `#downsize` | Canvas + `MediaRecorder` | Real-time encode (a 2-min clip takes 2 min) — the UI says so. MP4 when the browser can write it, WebM otherwise. Only works on files the browser can already decode. |
 
@@ -157,6 +165,29 @@ therefore cannot come off a shelf. **Keep applying that test:** borrow engines, 
 - `loadFFmpeg(say)` takes a status callback so each tool owns its own status line and bar. It
   used to write into the trimmer's markup directly; do not reintroduce that.
 
+### 4.3 The slate generator
+
+Built 2026-08-15. First tool here that *makes* something rather than repairing something, and
+the first with no file input at all — so there is nothing to probe and no failure mode more
+complicated than an empty box.
+
+- **One draw function, two scales.** `drawSlate(ctx, W, H, opts)` sizes everything as a fraction
+  of the canvas it is handed, so the on-screen preview and the exported PNG are the same code.
+  The preview cannot drift from the file. Preview runs at 960px wide; export runs at the chosen
+  resolution. Do not "optimise" this into two code paths.
+- **Text is auto-fitted**, shrinking until the widest line fits the margin and the block fits the
+  chosen fill fraction. Manual line breaks are honoured; there is no automatic word wrap, because
+  a designer choosing where "Two years later" breaks is the point.
+- **Google Fonts, loaded on demand** — picking a font fetches that font, nothing is fetched up
+  front. Permitted under §2 because a font request carries no user data. **The failure path is
+  the important one:** a blocked or offline network is normal in a school, so the tool falls back
+  to the system face, says so plainly, and still produces a card. There is a test that routes
+  `fonts.googleapis.com` to an abort and asserts a PNG still comes out.
+- **Transparent background** is offered and the preview sits on a checkerboard, so "see-through"
+  reads as see-through rather than as white.
+- **Presets** (blackout, act, intermission, warning, surtitle) exist because a blank box is a
+  worse starting point than something to edit.
+
 ## 5. Candidate list
 
 Sourced partly from a Gemini brainstorm (2026-08-15). Ordered by how often the problem actually
@@ -168,7 +199,7 @@ comes up in a school show. Nothing below is committed.
 |---|---|---|
 | ~~Trim a video~~ | ffmpeg.wasm | **Built 2026-08-15** — see §4.1. |
 | ~~Pull the sound out of a video~~ | ffmpeg.wasm | **Built 2026-08-15** — see §4.2. |
-| **Title / slate cards** | Canvas + `FontFace` | Blackouts, act cards, intermission countdowns, surtitles. No file input at all, so nothing can go wrong. Fonts must be bundled — no Google Fonts CDN call (rule 1). |
+| ~~Title / slate cards~~ | Canvas + Google Fonts | **Built 2026-08-15** — see §4.3. Fonts are fetched, not bundled: rule 1 was clarified rather than broken. |
 | **Projector test grid** | Canvas | Pairs directly with the extension's surface warping. Pure generator, tiny. |
 | **Split & merge script PDFs** | `pdf-lib` (MIT) | Real stage-management chore, and pdf-lib is small and clean. |
 
@@ -249,6 +280,9 @@ all. It now asserts the actual numbers.
 
 ## 8. History
 
+- **2026-08-15** — Slate generator (§4.3), and rule 1 clarified: no *user file* may leave the
+  machine, but fetching assets the page needs (fonts) is fine. Long filenames wrap in the facts
+  grid instead of painting over the neighbouring cell.
 - **2026-08-15** — Audio ripper (§4.2), sharing the trimmer's engine. Duplicate-id guard added
   to the tests after `t-out` was used twice, which built the trimmer's download link inside a
   drag handle.

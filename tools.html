@@ -121,6 +121,29 @@
   .marktimes { color: #ffd700; font-weight: 600; font-variant-numeric: tabular-nums; }
   .marktimes small { color: #8d93a0; font-weight: 400; display: block; text-align: center; }
 
+  /* --- slate generator ------------------------------------------------------ */
+  .preset-row { display: flex; flex-wrap: wrap; gap: .55rem; margin-bottom: 1.2rem; }
+  textarea#s-text {
+    font: inherit; width: 100%; resize: vertical; color: #fff; background: #2a2a33;
+    border: 1px solid #4a4a55; border-radius: 8px; padding: .7rem .8rem; line-height: 1.5;
+  }
+  textarea#s-text:focus { outline: none; border-color: #ffd700; }
+  input[type=color] {
+    width: 4.4rem; height: 2.5rem; padding: 2px; cursor: pointer;
+    background: #2a2a33; border: 1px solid #4a4a55; border-radius: 8px;
+  }
+  label.check { display: flex; align-items: center; gap: .45rem; font-size: .9rem; color: #cfd3da; cursor: pointer; }
+  label.check input { width: 1.05rem; height: 1.05rem; accent-color: #ffd700; cursor: pointer; }
+  /* Checkerboard, so a transparent card reads as transparent rather than as white. */
+  .slate-stage {
+    margin: 1.3rem 0 .6rem; border-radius: 10px; overflow: hidden; border: 1px solid #3f3f47;
+    background-color: #6b6b73;
+    background-image: linear-gradient(45deg, #55555c 25%, transparent 25%, transparent 75%, #55555c 75%),
+                      linear-gradient(45deg, #55555c 25%, transparent 25%, transparent 75%, #55555c 75%);
+    background-size: 22px 22px; background-position: 0 0, 11px 11px;
+  }
+  .slate-stage canvas { display: block; width: 100%; height: auto; }
+
   .bar { height: 10px; background: #2a2a33; border-radius: 999px; overflow: hidden; margin: .8rem 0 .4rem; }
   .bar > i { display: block; height: 100%; width: 0; background: #00e676; transition: width .2s; }
   .note { color: #8d93a0; font-size: .87rem; line-height: 1.6; }
@@ -163,6 +186,11 @@
         <h2>Trim a video</h2>
         <p>Cut the dead air off the front and back of a clip. Nothing is re-encoded, so it is
           instant and the picture is untouched.</p>
+      </button>
+      <button class="tool-btn" data-tool="slate">
+        <h2>Make a title card</h2>
+        <p>Act titles, blackouts, intermission cards, content warnings, surtitles. Type it, pick
+          a font, download a picture you can put straight on a cue.</p>
       </button>
       <button class="tool-btn" data-tool="rip">
         <h2>Get the sound out of a video</h2>
@@ -242,6 +270,98 @@
       </div>
 
       <p class="note" id="t-warn" style="margin-top:1rem;"></p>
+    </div>
+    <div class="exit-row"><button class="navbtn to-index">&larr; Done — back to all tools</button></div>
+  </div>
+
+  <!-- ===================== SLATE / TITLE CARDS ===================== -->
+  <div class="view" id="view-slate" hidden>
+    <div class="panel">
+      <h2>Make a title card</h2>
+      <p class="lede">A slide that says <em>Act Two</em>, or <em>Intermission — 15 minutes</em>, or
+        nothing at all in pure black. Type it, and you get a picture at exactly the size your
+        projector wants.</p>
+
+      <div class="preset-row" id="s-presets">
+        <button class="mark" data-preset="blackout">Blackout</button>
+        <button class="mark" data-preset="act">Act title</button>
+        <button class="mark" data-preset="interval">Intermission</button>
+        <button class="mark" data-preset="warning">Content warning</button>
+        <button class="mark" data-preset="surtitle">Surtitle</button>
+      </div>
+
+      <label class="field" for="s-text">What should it say?</label>
+      <textarea id="s-text" rows="3" spellcheck="true"
+        placeholder="Act Two&#10;Two years later">Act Two</textarea>
+      <p class="note">Press Enter for a new line. Leave it empty for a plain colour card.</p>
+
+      <div class="row">
+        <div>
+          <label class="field" for="s-font">Font</label>
+          <select id="s-font"></select>
+        </div>
+        <div>
+          <label class="field" for="s-weight">Weight</label>
+          <select id="s-weight">
+            <option value="400">Regular</option>
+            <option value="700" selected>Bold</option>
+          </select>
+        </div>
+        <div>
+          <label class="field" for="s-size">Text size</label>
+          <select id="s-size">
+            <option value="0.86">Fill the frame</option>
+            <option value="0.62" selected>Large</option>
+            <option value="0.42">Medium</option>
+            <option value="0.26">Small</option>
+          </select>
+        </div>
+        <div>
+          <label class="field" for="s-align">Position</label>
+          <select id="s-align">
+            <option value="center" selected>Middle</option>
+            <option value="top">Top</option>
+            <option value="bottom">Bottom (surtitles)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label class="field" for="s-ink">Text colour</label>
+          <input type="color" id="s-ink" value="#ffffff">
+        </div>
+        <div>
+          <label class="field" for="s-bg">Background</label>
+          <input type="color" id="s-bg" value="#000000">
+        </div>
+        <div>
+          <label class="field" for="s-clear">Transparent</label>
+          <label class="check"><input type="checkbox" id="s-clear"> See-through background</label>
+        </div>
+        <div>
+          <label class="field" for="s-shadow">Readability</label>
+          <label class="check"><input type="checkbox" id="s-shadow" checked> Shadow behind the text</label>
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label class="field" for="s-res">Size of the picture</label>
+          <select id="s-res">
+            <option value="1920x1080" selected>1920 × 1080 — standard projector</option>
+            <option value="1280x720">1280 × 720 — smaller projector</option>
+            <option value="3840x2160">3840 × 2160 — 4K</option>
+            <option value="1024x768">1024 × 768 — older 4:3 projector</option>
+            <option value="1920x1200">1920 × 1200 — 16:10 projector</option>
+          </select>
+        </div>
+        <button class="go" id="s-go">Download the card</button>
+      </div>
+
+      <div class="slate-stage"><canvas id="s-canvas"></canvas></div>
+      <p class="note" id="s-status">This is exactly what the file will look like.</p>
+      <div id="s-result"></div>
     </div>
     <div class="exit-row"><button class="navbtn to-index">&larr; Done — back to all tools</button></div>
   </div>
@@ -360,6 +480,7 @@
 var TOOLS = {
   check:    'Will this file play?',
   trim:     'Trim a video',
+  slate:    'Make a title card',
   rip:      'Get the sound out of a video',
   downsize: 'Shrink a video'
 };
@@ -828,7 +949,198 @@ async function trim() {
 }
 
 /* ===========================================================================
- * TOOL 3 — audio ripper
+ * TOOL 3 — slate / title cards
+ *
+ * Plain Canvas: no engine, no download, instant. drawSlate() sizes everything
+ * relative to the height it is given, so the preview and the exported file are
+ * the same code at two scales — the preview is never a separate approximation
+ * that can drift from what gets saved.
+ *
+ * Fonts come from Google Fonts. That is a deliberate exception to the no-network
+ * habit of the rest of this project and it is safe here for one reason: a font
+ * request carries nothing about the user's files. Nothing goes UP. See TOOLS.md §2.
+ * Every font is loaded on demand — picking one fetches one — and the card still
+ * renders in the system face if the request fails, which is what makes this
+ * usable on a locked-down school network.
+ * ========================================================================= */
+var SLATE_FONTS = [
+  { id: '',                  label: 'System — plain and clear',        stack: 'system-ui, sans-serif' },
+  { id: 'Cinzel',            label: 'Cinzel — classical, Shakespeare' },
+  { id: 'Playfair Display',  label: 'Playfair Display — elegant' },
+  { id: 'Bebas Neue',        label: 'Bebas Neue — tall poster capitals', weights: '400' },
+  { id: 'Oswald',            label: 'Oswald — condensed, fits long titles' },
+  { id: 'Anton',             label: 'Anton — heavy and loud',           weights: '400' },
+  { id: 'Special Elite',     label: 'Special Elite — typewriter',       weights: '400' },
+  { id: 'IM Fell English',   label: 'IM Fell English — old book' },
+  { id: 'Libre Baskerville', label: 'Libre Baskerville — readable serif' },
+  { id: 'Great Vibes',       label: 'Great Vibes — handwritten script',  weights: '400' },
+  { id: 'Courier Prime',     label: 'Courier Prime — script pages' }
+];
+var SLATE_PRESETS = {
+  blackout: { text: '',                          ink: '#ffffff', bg: '#000000', size: '0.62', align: 'center' },
+  act:      { text: 'Act Two',                   ink: '#ffffff', bg: '#000000', size: '0.62', align: 'center' },
+  interval: { text: 'Intermission\n15 minutes',  ink: '#ffd700', bg: '#101014', size: '0.42', align: 'center' },
+  warning:  { text: 'This performance contains\nhaze, strobe lighting\nand a gunshot',
+              ink: '#ffffff', bg: '#101014', size: '0.26', align: 'center' },
+  surtitle: { text: 'Two years later',           ink: '#ffffff', bg: '#000000', size: '0.26', align: 'bottom' }
+};
+
+var sCanvas = document.getElementById('s-canvas');
+var sText   = document.getElementById('s-text');
+var sFont   = document.getElementById('s-font');
+var sStatus = document.getElementById('s-status');
+var sResult = document.getElementById('s-result');
+var sLoaded = {};                                  // font id -> true once actually usable
+
+SLATE_FONTS.forEach(function (f) {
+  var o = document.createElement('option');
+  o.value = f.id; o.textContent = f.label;
+  sFont.appendChild(o);
+});
+
+function slateOpts() {
+  var res = document.getElementById('s-res').value.split('x');
+  var chosen = SLATE_FONTS.filter(function (f) { return f.id === sFont.value; })[0] || SLATE_FONTS[0];
+  return {
+    text:   sText.value,
+    family: chosen.id && sLoaded[chosen.id] ? '"' + chosen.id + '", serif' : (chosen.stack || 'system-ui, sans-serif'),
+    weight: document.getElementById('s-weight').value,
+    fill:   parseFloat(document.getElementById('s-size').value),
+    align:  document.getElementById('s-align').value,
+    ink:    document.getElementById('s-ink').value,
+    bg:     document.getElementById('s-clear').checked ? null : document.getElementById('s-bg').value,
+    shadow: document.getElementById('s-shadow').checked,
+    w: +res[0], h: +res[1]
+  };
+}
+
+/* Everything in here is a fraction of H, so the same call fills a 640px preview and a
+   4K export identically. Nothing is measured in pixels-as-typed. */
+function drawSlate(ctx, W, H, o) {
+  ctx.clearRect(0, 0, W, H);
+  if (o.bg) { ctx.fillStyle = o.bg; ctx.fillRect(0, 0, W, H); }
+
+  var lines = o.text.split('\n').filter(function (l, i, a) {
+    return l.trim() !== '' || (i > 0 && i < a.length - 1);      // keep interior blank lines
+  });
+  if (!lines.length) return;
+
+  var margin = W * 0.07;
+  var maxW = W - margin * 2, maxH = H * o.fill;
+  var gap = 1.28;                                                // line height, as a multiple
+
+  // Largest size that fits both ways. Coarse then fine: measureText is the expensive part.
+  var size = maxH / lines.length / gap;
+  for (var pass = 0; pass < 40; pass++) {
+    ctx.font = o.weight + ' ' + size + 'px ' + o.family;
+    var widest = 0;
+    for (var i = 0; i < lines.length; i++) widest = Math.max(widest, ctx.measureText(lines[i]).width);
+    if (widest <= maxW && size * lines.length * gap <= maxH) break;
+    size *= Math.min(0.97, Math.max(0.5, maxW / (widest || maxW)));
+  }
+
+  ctx.font = o.weight + ' ' + size + 'px ' + o.family;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  if (o.shadow) {
+    ctx.shadowColor = 'rgba(0,0,0,.75)';
+    ctx.shadowBlur = size * 0.16;
+    ctx.shadowOffsetY = size * 0.045;
+  }
+  ctx.fillStyle = o.ink;
+
+  var block = size * gap * lines.length;
+  var top = o.align === 'top' ? margin
+          : o.align === 'bottom' ? H - margin - block
+          : (H - block) / 2;
+  for (var j = 0; j < lines.length; j++) {
+    ctx.fillText(lines[j], W / 2, top + size * gap * (j + 0.5), maxW);
+  }
+  ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+}
+
+/* Preview at a fixed working width, matching the chosen aspect. Drawing 4K into the page
+   would cost tens of megabytes for something being shown 700px wide. */
+function slatePreview() {
+  var o = slateOpts();
+  var pw = 960, ph = Math.round(pw * (o.h / o.w));
+  if (sCanvas.width !== pw || sCanvas.height !== ph) { sCanvas.width = pw; sCanvas.height = ph; }
+  drawSlate(sCanvas.getContext('2d'), pw, ph, o);
+}
+
+/* Ask for a font only when it is picked. If Google is unreachable — school firewall, no
+   internet — the card is still made, in the system face, and the page says so plainly
+   rather than silently producing something that does not match the preview. */
+async function useFont(id) {
+  if (!id || sLoaded[id]) { slatePreview(); return; }
+  var def = SLATE_FONTS.filter(function (f) { return f.id === id; })[0];
+  sStatus.textContent = 'Fetching the ' + id + ' font…';
+  try {
+    var href = 'https://fonts.googleapis.com/css2?family=' +
+      encodeURIComponent(id).replace(/%20/g, '+') + ':wght@' + (def.weights || '400;700') + '&display=swap';
+    await new Promise(function (resolve, reject) {
+      var link = document.createElement('link');
+      link.rel = 'stylesheet'; link.href = href;
+      link.onload = resolve;
+      link.onerror = function () { reject(new Error('no')); };
+      document.head.appendChild(link);
+      setTimeout(function () { reject(new Error('slow')); }, 8000);
+    });
+    await Promise.all(['400', '700'].map(function (w) {
+      return document.fonts.load(w + ' 64px "' + id + '"');
+    }));
+    sLoaded[id] = document.fonts.check('700 64px "' + id + '"');
+    if (!sLoaded[id]) throw new Error('not usable');
+    sStatus.textContent = 'This is exactly what the file will look like.';
+  } catch (e) {
+    sLoaded[id] = false;
+    sStatus.innerHTML = '<strong style="color:#ffcf66;">Could not fetch ' + esc(id) + '</strong> — ' +
+      'this computer may be offline or the network may block it. The card below still works; ' +
+      'it is just in the plain font.';
+  }
+  slatePreview();
+}
+
+sFont.addEventListener('change', function () { useFont(sFont.value); });
+['s-text', 's-weight', 's-size', 's-align', 's-ink', 's-bg', 's-clear', 's-shadow', 's-res']
+  .forEach(function (id) {
+    var el = document.getElementById(id);
+    el.addEventListener('input', slatePreview);
+    el.addEventListener('change', slatePreview);
+  });
+
+document.getElementById('s-presets').addEventListener('click', function (e) {
+  var btn = e.target.closest('[data-preset]');
+  if (!btn) return;
+  var p = SLATE_PRESETS[btn.dataset.preset];
+  sText.value = p.text;
+  document.getElementById('s-ink').value = p.ink;
+  document.getElementById('s-bg').value = p.bg;
+  document.getElementById('s-size').value = p.size;
+  document.getElementById('s-align').value = p.align;
+  document.getElementById('s-clear').checked = false;
+  slatePreview();
+});
+
+document.getElementById('s-go').addEventListener('click', function () {
+  var o = slateOpts();
+  var out = document.createElement('canvas');
+  out.width = o.w; out.height = o.h;
+  drawSlate(out.getContext('2d'), o.w, o.h, o);
+  out.toBlob(function (blob) {
+    var first = (o.text.split('\n')[0] || 'card').trim().replace(/[^\w -]+/g, '').slice(0, 40) || 'card';
+    var url = URL.createObjectURL(blob);
+    sResult.innerHTML = '<a class="dl" download="' + esc(first) + ' ' + o.w + 'x' + o.h + '.png" href="' + url + '">' +
+      'Download the card</a><p class="note" style="margin-top:.8rem;">A PNG at ' + o.w + ' × ' + o.h +
+      ', ' + human(blob.size) + '. Add it to a cue the same way you would any picture.</p>';
+    sResult.querySelector('a').click();          // they pressed a button that says download
+  }, 'image/png');
+});
+
+slatePreview();
+
+/* ===========================================================================
+ * TOOL 4 — audio ripper
  *
  * Same engine as the trimmer, same instinct: copy the existing audio packets out
  * rather than decode and re-encode them.
