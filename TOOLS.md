@@ -134,8 +134,19 @@ up front, says so, and disables the button; there is a test for the message. To 
 locally, run `npx http-server . -p 8765 -c-1` and use the localhost address.
 
 **Follow-ups this unlocks** (the 32 MB is already paid for): ~~audio extractor~~ (done, §4.2),
-GIF→MP4, a real converter for the "Won't play" verdict, and a non-real-time rewrite of the
-downsizer.
+GIF→MP4, and a real converter for the "Won't play" verdict.
+
+**Measured, 2026-08-15 — and it kills one of those follow-ups.** A 1080p re-encode through
+`libx264` in the single-threaded wasm core runs at **8.5× realtime** at `-preset veryfast`
+(59s to produce a 7-second clip) and 11.6× at `-preset medium`, on a desktop; assume a
+classroom machine is two to three times slower again. The downsizer's `MediaRecorder` approach
+runs at **1×** realtime, so it is roughly an order of magnitude faster than FFmpeg here.
+"Rewrite the downsizer on FFmpeg to escape real time" was listed as a follow-up above and it
+was simply wrong — it would make that tool much slower. Leave the downsizer alone.
+
+The corollary: **stream copies are what this engine is good at** (trim, rip — about a second
+each), and anything that has to touch pixels is priced per second of output. Check a new
+FFmpeg tool against that line before promising it.
 
 ### 4.2 The audio ripper
 
@@ -202,6 +213,33 @@ comes up in a school show. Nothing below is committed.
 | ~~Title / slate cards~~ | Canvas + Google Fonts | **Built 2026-08-15** — see §4.3. Fonts are fetched, not bundled: rule 1 was clarified rather than broken. |
 | **Projector test grid** | Canvas | Pairs directly with the extension's surface warping. Pure generator, tiny. |
 | **Split & merge script PDFs** | `pdf-lib` (MIT) | Real stage-management chore, and pdf-lib is small and clean. |
+
+### Seamless video looper — scoped 2026-08-15, not started
+
+Mark in and out, blend the tail back over the head, get a clip that loops with no visible jump.
+Asked for because it is a thing people always want and other tool sites offer it.
+
+**Feasible.** `xfade`, `acrossfade` and `libx264` are all in the vendored core (checked, not
+assumed). The command is one filter graph:
+
+    [0:v]split[a][b];
+    [a]trim=start=D,setpts=PTS-STARTPTS[main];
+    [b]trim=end=D,setpts=PTS-STARTPTS[head];
+    [main][head]xfade=transition=fade:duration=D:offset=(L-2D)
+
+with `acrossfade=d=D` alongside it when there is audio. Output length is `L-D`, and it needs
+`L > 2D`.
+
+**The catch is time, not difficulty.** This is the first tool here that cannot stream-copy —
+blending pixels means re-encoding — so it is priced by the benchmark above: roughly a minute of
+work per 7 seconds of 1080p output on a desktop, several times that on a classroom laptop.
+Fine for the 5–15 second loops this is actually for; unpleasant much past 30 seconds.
+
+**Therefore, when built:** offer 720p as well as 1080p (720p is ~2.5× faster and a looping
+background does not need the pixels), quote an honest estimate up front from the measured rate
+rather than a spinner, and warn above ~30 seconds instead of silently starting a ten-minute job.
+The loop preview matters more than the download button — play the result on repeat in the page
+so the seam can be judged before anyone waits on an export.
 
 ### Maybe
 
