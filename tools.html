@@ -19,10 +19,24 @@
     color: #fff; min-height: 100vh; padding: 2rem 1.25rem 4rem;
   }
   .wrap { max-width: 900px; margin: 0 auto; }
-  header { text-align: center; margin-bottom: 2.2rem; }
-  header img { width: 68px; height: 68px; }
+  header { text-align: center; margin-bottom: 1.4rem; }
+  .home-link { display: inline-block; border-radius: 12px; padding: .3rem; transition: transform .18s, background .18s; }
+  .home-link:hover, .home-link:focus-visible { transform: translateY(-2px); background: rgba(255,215,0,.1); outline: none; }
+  header img { width: 68px; height: 68px; display: block; }
   h1 { color: #ffd700; font-size: 1.9rem; margin: .7rem 0 .3rem; }
   .tagline { color: #ccc; }
+
+  /* --- the two ways out: home, and up to the tool index --------------------- */
+  .pagenav { display: flex; flex-wrap: wrap; justify-content: center; gap: .6rem; margin-bottom: 1.2rem; }
+  .navbtn {
+    font: inherit; font-size: .92rem; cursor: pointer; text-decoration: none;
+    color: #fff; background: rgba(255,255,255,.09); border: 1px solid #4a4a52;
+    border-radius: 8px; padding: .6rem 1.1rem; transition: background .18s, border-color .18s;
+  }
+  .navbtn:hover { background: rgba(255,215,0,.16); border-color: #ffd700; }
+  .navbtn[hidden] { display: none; }
+  .exit-row { margin-top: 1.6rem; text-align: center; }
+
   .crumb { margin-bottom: 1.5rem; font-size: .95rem; color: #8d93a0; }
   .crumb a { color: #9aa0ff; text-decoration: none; }
   .crumb a:hover { text-decoration: underline; }
@@ -92,10 +106,19 @@
 <div class="wrap">
 
   <header>
-    <img src="images/tcp-icon-128.png" alt="Theatre Cue Player">
+    <!-- The mark is the way home, the way people expect it to be. The button below says so
+         out loud, because a clickable logo is a convention a first-time teacher may not know. -->
+    <a class="home-link" href="/" title="Back to the Theatre Cue Player home page">
+      <img src="images/tcp-icon-128.png" alt="Theatre Cue Player — home">
+    </a>
     <h1>Tools</h1>
     <p class="tagline">Free, and everything runs on your own machine.</p>
   </header>
+
+  <nav class="pagenav">
+    <button class="navbtn to-index" id="up-btn" hidden>&larr; All tools</button>
+    <a class="navbtn" href="/">&larr; Theatre Cue Player home</a>
+  </nav>
 
   <p class="crumb" id="crumb"><a href="/">Theatre Cue Player</a> &rsaquo; <strong>Tools</strong></p>
 
@@ -131,6 +154,7 @@
       <p class="note" style="margin-top:1rem;">Checked in your own browser, so the answer is the
         truth for <em>this</em> machine. If your booth computer is different, check it there too.</p>
     </div>
+    <div class="exit-row"><button class="navbtn to-index">&larr; Done — back to all tools</button></div>
   </div>
 
   <!-- ===================== DOWNSIZER ===================== -->
@@ -174,6 +198,7 @@
       </div>
       <p class="note" id="d-warn" style="margin-top:1rem;"></p>
     </div>
+    <div class="exit-row"><button class="navbtn to-index">&larr; Done — back to all tools</button></div>
   </div>
 
   <footer>
@@ -195,24 +220,41 @@
  * Nothing here uploads anything: this page makes no network requests of any kind.
  * ========================================================================= */
 
-var TOOLS = ['check', 'downsize'];
+/* Every tool declares itself once, here: the id matches #view-<id> and the hash, and the
+   title is what the breadcrumb and the tab title say. Adding a tool means adding a line. */
+var TOOLS = {
+  check:    'Will this file play?',
+  downsize: 'Shrink a video'
+};
+var BASE_TITLE = 'Tools — Theatre Cue Player';
 
 function show(name) {
-  var known = TOOLS.indexOf(name) >= 0;
+  var known = Object.prototype.hasOwnProperty.call(TOOLS, name);
   document.getElementById('view-index').hidden = known;
-  TOOLS.forEach(function (t) { document.getElementById('view-' + t).hidden = (t !== name); });
+  Object.keys(TOOLS).forEach(function (t) {
+    document.getElementById('view-' + t).hidden = (t !== name);
+  });
+  document.getElementById('up-btn').hidden = !known;
   document.getElementById('crumb').innerHTML = known
-    ? '<a href="/">Theatre Cue Player</a> &rsaquo; <a href="#" id="crumb-up">Tools</a> &rsaquo; <strong>'
-      + (name === 'check' ? 'Will this file play?' : 'Shrink a video') + '</strong>'
+    ? '<a href="/">Theatre Cue Player</a> &rsaquo; <a href="#" class="to-index">Tools</a> &rsaquo; <strong>'
+      + TOOLS[name] + '</strong>'
     : '<a href="/">Theatre Cue Player</a> &rsaquo; <strong>Tools</strong>';
-  var up = document.getElementById('crumb-up');
-  if (up) up.addEventListener('click', function (e) { e.preventDefault(); location.hash = ''; });
+  document.title = known ? TOOLS[name] + ' — Theatre Cue Player' : BASE_TITLE;
   window.scrollTo(0, 0);
 }
 function route() { show((location.hash || '').replace('#', '')); }
 window.addEventListener('hashchange', route);
 document.querySelectorAll('.tool-btn').forEach(function (b) {
   b.addEventListener('click', function () { location.hash = b.dataset.tool; });
+});
+
+/* One handler for every "back to the tool list" control — the nav button, the button at the
+   foot of each tool, and the breadcrumb, including the crumb links rebuilt by show(). */
+document.addEventListener('click', function (e) {
+  var el = e.target.closest && e.target.closest('.to-index');
+  if (!el) return;
+  e.preventDefault();
+  location.hash = '';
 });
 
 /* --- shared helpers ------------------------------------------------------ */
