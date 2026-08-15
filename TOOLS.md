@@ -82,6 +82,7 @@ The checker mirrors the extension's own numbers so the two never disagree. If th
 |---|---|---|---|
 | Will this file play? | `#check` | native media elements | Decodes the file for real; verdicts: Good to go / Plays, but heavy / Risky / Won't play. Handles images too. |
 | Trim a video | `#trim` | ffmpeg.wasm, stream copy | Lossless and about a second, whatever the length. Cut lands on the nearest keyframe and the tool says so. See §4.1. |
+| Make a video loop seamlessly | `#loop` | ffmpeg.wasm, `xfade` + `acrossfade` | Blends the tail back over the head. **Re-encodes** — the only tool here that does. Output is the selection minus one blend. See §4.4. |
 | Make a title card | `#slate` | Canvas + Google Fonts | Act titles, blackouts, intermission, warnings, surtitles. Live preview, PNG at projector resolutions. No engine, instant. See §4.3. |
 | Get the sound out of a video | `#rip` | ffmpeg.wasm | Copies the audio track out untouched (`-vn -c:a copy`), or re-records as WAV/MP3. Reads the stream first so it can name the codec and detect a silent clip. See §4.2. |
 | Shrink a video | `#downsize` | Canvas + `MediaRecorder` | Real-time encode (a 2-min clip takes 2 min) — the UI says so. MP4 when the browser can write it, WebM otherwise. Only works on files the browser can already decode. |
@@ -199,6 +200,40 @@ complicated than an empty box.
 - **Presets** (blackout, act, intermission, warning, surtitle) exist because a blank box is a
   worse starting point than something to edit.
 
+### 4.4 The seamless looper
+
+Built 2026-08-15. Hold back the first D seconds of the marked stretch and dissolve the tail into
+them; what comes out is `L - D` long and its last frame blends into its first.
+
+    [0:v]trim=IN:OUT,setpts=PTS-STARTPTS[sel];
+    [sel]split[a][b];
+    [a]trim=start=D,setpts=PTS-STARTPTS[main];      # L-D long, ends on the original tail
+    [b]trim=end=D,setpts=PTS-STARTPTS[head];        # the original opening
+    [main][head]xfade=transition=fade:duration=D:offset=(L-2D)
+
+plus `acrossfade=d=D` on a matching `atrim`/`asplit` chain when the clip has sound. The offset is
+measured along `[main]`, which is already D shorter than the selection — that is the easy thing
+to get wrong.
+
+- **This is the only tool here that re-encodes**, and it is priced accordingly (see the
+  benchmark in §4.1): about a minute per seven seconds of 1080p output on a desktop. Everything
+  about the UI follows from that:
+  - a time estimate is quoted **before** anything starts, computed from output pixels × the
+    measured rate, and it says an older machine will be slower;
+  - once running, the estimate is **recomputed from real progress**, which beats any guess about
+    the user's CPU;
+  - 720p is offered as the fast way out, and it is labelled as such;
+  - there is a test asserting the estimate appears before the job does. Do not replace it with a
+    spinner.
+- **`L > 2D` is enforced** and explained in words rather than greyed out silently: the end and
+  the beginning have to overlap without meeting in the middle.
+- **The loop preview is the point.** The result plays on repeat in the page, above the download
+  button, so the join can be judged before anyone commits it to a show. Ship no version of this
+  tool where the only way to check the seam is to download and open it.
+- `makeMarkBar()` came out of this: the trimmer and the looper both mark in and out against a
+  preview, so the drag, keyboard nudging, playhead and "play the selection" live in one place
+  with only the caption text differing.
+
 ## 5. Candidate list
 
 Sourced partly from a Gemini brainstorm (2026-08-15). Ordered by how often the problem actually
@@ -214,32 +249,7 @@ comes up in a school show. Nothing below is committed.
 | **Projector test grid** | Canvas | Pairs directly with the extension's surface warping. Pure generator, tiny. |
 | **Split & merge script PDFs** | `pdf-lib` (MIT) | Real stage-management chore, and pdf-lib is small and clean. |
 
-### Seamless video looper — scoped 2026-08-15, not started
-
-Mark in and out, blend the tail back over the head, get a clip that loops with no visible jump.
-Asked for because it is a thing people always want and other tool sites offer it.
-
-**Feasible.** `xfade`, `acrossfade` and `libx264` are all in the vendored core (checked, not
-assumed). The command is one filter graph:
-
-    [0:v]split[a][b];
-    [a]trim=start=D,setpts=PTS-STARTPTS[main];
-    [b]trim=end=D,setpts=PTS-STARTPTS[head];
-    [main][head]xfade=transition=fade:duration=D:offset=(L-2D)
-
-with `acrossfade=d=D` alongside it when there is audio. Output length is `L-D`, and it needs
-`L > 2D`.
-
-**The catch is time, not difficulty.** This is the first tool here that cannot stream-copy —
-blending pixels means re-encoding — so it is priced by the benchmark above: roughly a minute of
-work per 7 seconds of 1080p output on a desktop, several times that on a classroom laptop.
-Fine for the 5–15 second loops this is actually for; unpleasant much past 30 seconds.
-
-**Therefore, when built:** offer 720p as well as 1080p (720p is ~2.5× faster and a looping
-background does not need the pixels), quote an honest estimate up front from the measured rate
-rather than a spinner, and warn above ~30 seconds instead of silently starting a ten-minute job.
-The loop preview matters more than the download button — play the result on repeat in the page
-so the seam can be judged before anyone waits on an export.
+### ~~Seamless video looper~~ — BUILT 2026-08-15, see §4.4
 
 ### Maybe
 
@@ -318,6 +328,8 @@ all. It now asserts the actual numbers.
 
 ## 8. History
 
+- **2026-08-15** — Seamless looper (§4.4). The mark-in/mark-out bar became `makeMarkBar()`,
+  shared by the trimmer and the looper instead of copied.
 - **2026-08-15** — Slate generator (§4.3), and rule 1 clarified: no *user file* may leave the
   machine, but fetching assets the page needs (fonts) is fine. Long filenames wrap in the facts
   grid instead of painting over the neighbouring cell.

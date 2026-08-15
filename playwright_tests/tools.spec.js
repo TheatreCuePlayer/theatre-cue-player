@@ -139,6 +139,68 @@ test.describe('tools page', () => {
     expect(audio.duration).toBeGreaterThan(1);      // real, playable audio — not an empty file
   });
 
+  test('builds a seamless loop, shorter than the marked stretch by the blend', async ({ page, browserName }) => {
+    test.skip(browserName !== 'chromium', 'needs MediaRecorder to build its own fixture');
+    test.setTimeout(300_000);
+    page.on('console', m => { if (m.type() === 'error') console.log('PAGE ERROR:', m.text()); });
+
+    await page.goto(BASE + '#loop');
+    await makeClip(page, 'p-file', { seconds: 6, name: 'campfire.webm' });
+    await expect(page.locator('#p-panel')).toBeVisible({ timeout: 20_000 });
+
+    // A time estimate is quoted BEFORE anything starts. This tool can run for minutes and must
+    // never do that behind a silent spinner.
+    await expect(page.locator('#p-estimate')).toContainText('loop at');
+    await expect(page.locator('#p-estimate')).toContainText(/take/);
+
+    await page.locator('#p-fade').selectOption('1');
+    const dur = await page.evaluate(() => window.pInfo.duration);
+
+    await page.locator('#p-go').click();
+    await expect(page.locator('#p-result video.loop-preview')).toBeVisible({ timeout: 240_000 });
+    await expect(page.locator('#p-status')).toContainText('Done in');
+
+    const made = await page.evaluate(async () => {
+      const href = document.querySelector('#p-result a.dl').href;
+      const blob = await (await fetch(href)).blob();
+      const v = document.createElement('video');
+      v.src = URL.createObjectURL(blob);
+      const d = await new Promise(r => {
+        v.onloadedmetadata = () => r(v.duration);
+        v.onerror = () => r(-1);
+        setTimeout(() => r(-2), 10000);
+      });
+      return { size: blob.size, duration: d, type: blob.type };
+    });
+    expect(made.type).toBe('video/mp4');
+    expect(made.size).toBeGreaterThan(1000);
+    // The whole contract of the tool: output is the selection minus one blend length.
+    expect(made.duration).toBeGreaterThan(dur - 1 - 0.6);
+    expect(made.duration).toBeLessThan(dur - 1 + 0.6);
+
+    // The preview loops. If it does not, nobody can judge the join before downloading.
+    await expect(page.locator('#p-result video.loop-preview')).toHaveJSProperty('loop', true);
+    await expect(page.locator('#p-result a.dl')).toHaveAttribute('download', 'campfire-loop.mp4');
+  });
+
+  test('refuses a stretch too short to blend, and says why', async ({ page, browserName }) => {
+    test.skip(browserName !== 'chromium', 'needs MediaRecorder to build its own fixture');
+    test.setTimeout(120_000);
+    await page.goto(BASE + '#loop');
+    await makeClip(page, 'p-file', { seconds: 3, name: 'tiny.webm' });
+    await expect(page.locator('#p-panel')).toBeVisible({ timeout: 20_000 });
+
+    // A 2s blend needs 4s of material; this clip has 3.
+    await page.locator('#p-fade').selectOption('2');
+    await expect(page.locator('#p-estimate')).toContainText('Mark a longer stretch');
+    await expect(page.locator('#p-go')).toBeDisabled();
+
+    // ...and it recovers when the blend is shortened rather than staying stuck.
+    await page.locator('#p-fade').selectOption('0.5');
+    await expect(page.locator('#p-estimate')).toContainText('loop at');
+    await expect(page.locator('#p-go')).toBeEnabled();
+  });
+
   test('a long filename wraps instead of landing on top of the size', async ({ page, browserName }) => {
     test.skip(browserName !== 'chromium', 'needs MediaRecorder to build its own fixture');
     test.setTimeout(120_000);
@@ -307,7 +369,7 @@ test.describe('tools page', () => {
 
     // Assert the real numbers: an earlier version of this test only checked the text had
     // changed, which let a bug through where the marks never registered at all.
-    const [markedIn, markedOut] = await page.evaluate(() => [window.tIn, window.tOut]);
+    const [markedIn, markedOut] = await page.evaluate(() => [window.tBarCtl.getIn(), window.tBarCtl.getOut()]);
     expect(markedIn).toBeGreaterThan(1.2);
     expect(markedIn).toBeLessThan(1.8);
     expect(markedOut).toBeGreaterThan(4.2);
@@ -328,9 +390,9 @@ test.describe('tools page', () => {
     expect(linkBox.y).toBeGreaterThan(trackBox.y + trackBox.height);
     expect(linkBox.width).toBeGreaterThan(120);          // not squeezed into a 16px handle
 
-    const before = await page.evaluate(() => window.tOut);
+    const before = await page.evaluate(() => window.tBarCtl.getOut());
     await link.click({ modifiers: ['Alt'] });            // Alt-click: registers, skips the download
-    expect(await page.evaluate(() => window.tOut)).toBe(before);
+    expect(await page.evaluate(() => window.tBarCtl.getOut())).toBe(before);
     await expect(page.locator('#t-result a.dl')).toHaveAttribute('download', /rehearsal-clip-trimmed\.webm/);
 
     // The result is a real, shorter, playable video — not an empty file.
