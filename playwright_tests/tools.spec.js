@@ -50,6 +50,21 @@ test.describe('tools page', () => {
     await expect(page).toHaveTitle('Tools — Theatre Cue Player');
   });
 
+  test('no two elements share an id', async ({ page }) => {
+    // Worth a test of its own: the trimmer's results box and its end-trim handle were both
+    // id="t-out", so getElementById returned the handle and the download link was built
+    // inside a 16px drag control. Nothing threw, and a visibility assertion still passed.
+    await page.goto(BASE);
+    const dupes = await page.evaluate(() => {
+      const seen = new Map();
+      for (const el of document.querySelectorAll('[id]')) {
+        seen.set(el.id, (seen.get(el.id) || 0) + 1);
+      }
+      return [...seen].filter(([, n]) => n > 1).map(([id]) => id);
+    });
+    expect(dupes).toEqual([]);
+  });
+
   test('a deep link opens the tool directly', async ({ page }) => {
     await page.goto(BASE + '#downsize');
     await expect(page.locator('#view-downsize')).toBeVisible();
@@ -130,15 +145,27 @@ test.describe('tools page', () => {
 
     // Trim. This downloads the 32 MB engine from the local server on the way through.
     await page.locator('#t-go').click();
-    await expect(page.locator('#t-out a.dl')).toBeVisible({ timeout: 150_000 });
+    await expect(page.locator('#t-result a.dl')).toBeVisible({ timeout: 150_000 });
 
     await expect(page.locator('#t-status')).toContainText('Done');
     await expect(page.locator('#t-status')).toContainText('re-encoded');
-    await expect(page.locator('#t-out a.dl')).toHaveAttribute('download', /rehearsal-clip-trimmed\.webm/);
+
+    // The download link must sit in the results area, clear of the timeline — and clicking it
+    // must not move the trim. It once landed inside the end handle, where pressing it dragged
+    // the end point instead of downloading anything.
+    const link = page.locator('#t-result a.dl');
+    const [linkBox, trackBox] = [await link.boundingBox(), await page.locator('#t-track').boundingBox()];
+    expect(linkBox.y).toBeGreaterThan(trackBox.y + trackBox.height);
+    expect(linkBox.width).toBeGreaterThan(120);          // not squeezed into a 16px handle
+
+    const before = await page.evaluate(() => window.tOut);
+    await link.click({ modifiers: ['Alt'] });            // Alt-click: registers, skips the download
+    expect(await page.evaluate(() => window.tOut)).toBe(before);
+    await expect(page.locator('#t-result a.dl')).toHaveAttribute('download', /rehearsal-clip-trimmed\.webm/);
 
     // The result is a real, shorter, playable video — not an empty file.
     const result = await page.evaluate(async () => {
-      const href = document.querySelector('#t-out a.dl').href;
+      const href = document.querySelector('#t-result a.dl').href;
       const blob = await (await fetch(href)).blob();
       const v = document.createElement('video');
       v.src = URL.createObjectURL(blob);

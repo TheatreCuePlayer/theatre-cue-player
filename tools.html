@@ -227,7 +227,10 @@
 
         <div class="bar" id="t-bar" hidden><i></i></div>
         <p class="note" id="t-status"></p>
-        <div id="t-out"></div>
+        <!-- t-result, NOT t-out: that id belongs to the end-trim handle above. When both
+             had it, getElementById handed back the handle and the download link was built
+             inside a 16px drag control sitting on the timeline. -->
+        <div id="t-result"></div>
       </div>
 
       <p class="note" id="t-warn" style="margin-top:1rem;"></p>
@@ -527,7 +530,7 @@ var tTimes  = document.getElementById('t-times');
 var tPanel  = document.getElementById('t-panel');
 var tStatus = document.getElementById('t-status');
 var tBar    = document.getElementById('t-bar');
-var tOutBox = document.getElementById('t-out');
+var tOutBox = document.getElementById('t-result');
 var tGo     = document.getElementById('t-go');
 
 /* Opened from disk rather than served, the engine fetch dies with a bare "Failed to fetch"
