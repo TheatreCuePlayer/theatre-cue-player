@@ -199,6 +199,16 @@
             left: 0;
         }
 
+        /* The Ko-fi widget is a white panel on a dark page, so it gets a frame of its
+           own rather than sitting flush against the background. */
+        .kofi-panel {
+            max-width: 520px;
+            margin: 0 auto;
+            background: #f9f9f9;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
         .credits {
             margin-top: 3rem;
             padding-top: 2rem;
@@ -599,6 +609,16 @@
                 <li><strong>Browser version:</strong> stability and core audio features.</li>
                 <li><strong>Next:</strong> MIDI and OSC support.</li>
             </ul>
+        </div>
+
+        <h2 class="section-heading" id="support">Support the project</h2>
+        <p class="section-sub">Theatre Cue Player is free, and stays free. If it has saved you a
+            rehearsal, a tip covers the hosting and pays for the next feature.</p>
+        <div class="kofi-panel">
+            <iframe id="kofiframe"
+                src="https://ko-fi.com/theatrecueplayer/?hidefeed=true&amp;widget=true&amp;embed=true&amp;preview=true"
+                style="border:none;width:100%;padding:4px;background:#f9f9f9;" height="712"
+                title="theatrecueplayer" loading="lazy"></iframe>
         </div>
 
         <div class="credits">
