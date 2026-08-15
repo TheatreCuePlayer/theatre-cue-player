@@ -71,11 +71,14 @@ export default defineConfig({
     // },
   ],
 
-  /* Run your local dev server before starting the tests */
-  // webServer: {
-  //   command: 'npm run start',
-  //   url: 'http://localhost:3000',
-  //   reuseExistingServer: !process.env.CI,
-  // },
+  /* The site is static, so "the dev server" is just something that serves the folder.
+     tools.spec.js needs it: the trimmer fetches its wasm engine over HTTP, and file://
+     will not do that. -c-1 disables caching, so an edited page is never served stale. */
+  webServer: {
+    command: 'npx http-server . -p 8765 -c-1 --silent',
+    url: 'http://127.0.0.1:8765/tools.html',
+    reuseExistingServer: !process.env.CI,
+    timeout: 60_000,
+  },
 });
 

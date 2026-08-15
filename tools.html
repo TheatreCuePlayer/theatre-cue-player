@@ -92,6 +92,32 @@
   button.go { background: #28a745; border-color: #28a745; font-weight: 600; cursor: pointer; padding: .65rem 1.4rem; }
   button.go:hover:not(:disabled) { background: #1e7e34; }
   button.go:disabled { opacity: .5; cursor: default; }
+  button.go.alt { background: #2a2a33; border-color: #4a4a55; font-weight: 500; }
+  button.go.alt:hover:not(:disabled) { background: #34343f; border-color: #ffd700; }
+
+  /* --- trimmer: the bar under the video is the clip ------------------------ */
+  #t-video { width: 100%; max-height: 46vh; background: #000; border-radius: 10px; margin: 1.2rem 0 .9rem; display: block; }
+  .trimbar {
+    position: relative; height: 46px; background: #22222a; border: 1px solid #3f3f47;
+    border-radius: 8px; margin-bottom: .9rem; touch-action: none; user-select: none;
+  }
+  .trimsel { position: absolute; top: 0; bottom: 0; background: rgba(255,215,0,.20); border-left: 1px solid #ffd700; border-right: 1px solid #ffd700; }
+  .trimhandle {
+    position: absolute; top: -3px; width: 16px; height: 52px; margin-left: -8px;
+    background: #ffd700; border-radius: 5px; cursor: ew-resize;
+  }
+  .trimhandle::after { content: ''; position: absolute; left: 6px; top: 19px; width: 4px; height: 14px; border-left: 1px solid rgba(0,0,0,.45); border-right: 1px solid rgba(0,0,0,.45); }
+  .trimhandle:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+  .playhead { position: absolute; top: 0; bottom: 0; width: 2px; background: #fff; pointer-events: none; }
+  .markrow { display: flex; flex-wrap: wrap; gap: .8rem; align-items: center; justify-content: space-between; }
+  button.mark {
+    font: inherit; font-size: .92rem; cursor: pointer; color: #fff; background: #2a2a33;
+    border: 1px solid #4a4a55; border-radius: 8px; padding: .55rem 1rem;
+  }
+  button.mark:hover { border-color: #ffd700; background: rgba(255,215,0,.12); }
+  .marktimes { color: #ffd700; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .marktimes small { color: #8d93a0; font-weight: 400; display: block; text-align: center; }
+
   .bar { height: 10px; background: #2a2a33; border-radius: 999px; overflow: hidden; margin: .8rem 0 .4rem; }
   .bar > i { display: block; height: 100%; width: 0; background: #00e676; transition: width .2s; }
   .note { color: #8d93a0; font-size: .87rem; line-height: 1.6; }
@@ -130,6 +156,11 @@
         <p>Drop in a sound or video file and find out before tech week — whether it plays, whether
           it is too heavy to project smoothly, and what to do about it.</p>
       </button>
+      <button class="tool-btn" data-tool="trim">
+        <h2>Trim a video</h2>
+        <p>Cut the dead air off the front and back of a clip. Nothing is re-encoded, so it is
+          instant and the picture is untouched.</p>
+      </button>
       <button class="tool-btn" data-tool="downsize">
         <h2>Shrink a video</h2>
         <p>Re-encode an oversized clip down to a sensible projection size, so it stops stuttering
@@ -153,6 +184,53 @@
       <div class="results" id="c-results"></div>
       <p class="note" style="margin-top:1rem;">Checked in your own browser, so the answer is the
         truth for <em>this</em> machine. If your booth computer is different, check it there too.</p>
+    </div>
+    <div class="exit-row"><button class="navbtn to-index">&larr; Done — back to all tools</button></div>
+  </div>
+
+  <!-- ===================== TRIMMER ===================== -->
+  <div class="view" id="view-trim" hidden>
+    <div class="panel">
+      <h2>Trim a video</h2>
+      <p class="lede">Most clips arrive with a few seconds of nothing at each end — a logo, a
+        countdown, the moment someone reaches for the camera. Cut them off here and the cue starts
+        where you want it to.</p>
+      <div class="drop" id="t-drop" tabindex="0" role="button">
+        <strong>Drop a video here, or click to choose</strong>
+        <span>Nothing is uploaded. It is trimmed on this computer.</span>
+      </div>
+      <input type="file" id="t-file" accept="video/*">
+
+      <div id="t-panel" hidden>
+        <video id="t-video" controls playsinline preload="metadata"></video>
+
+        <!-- The bar under the video IS the clip: the lit part is what you keep. -->
+        <div class="trimbar" id="t-track">
+          <div class="trimsel" id="t-sel"></div>
+          <div class="trimhandle" id="t-in"  tabindex="0" role="slider" aria-label="Start of the trimmed clip"></div>
+          <div class="trimhandle" id="t-out" tabindex="0" role="slider" aria-label="End of the trimmed clip"></div>
+          <div class="playhead" id="t-head"></div>
+        </div>
+
+        <div class="markrow">
+          <button class="mark" id="t-set-in">&larr; Start here</button>
+          <span class="marktimes" id="t-times"></span>
+          <button class="mark" id="t-set-out">End here &rarr;</button>
+        </div>
+        <p class="note">Play the video, and when you reach the spot you want, press one of those
+          buttons. You can also drag the two handles on the bar.</p>
+
+        <div class="row">
+          <button class="go alt" id="t-play">Play just the part I am keeping</button>
+          <button class="go" id="t-go">Trim it</button>
+        </div>
+
+        <div class="bar" id="t-bar" hidden><i></i></div>
+        <p class="note" id="t-status"></p>
+        <div id="t-out"></div>
+      </div>
+
+      <p class="note" id="t-warn" style="margin-top:1rem;"></p>
     </div>
     <div class="exit-row"><button class="navbtn to-index">&larr; Done — back to all tools</button></div>
   </div>
@@ -205,6 +283,13 @@
     <a href="/">Theatre Cue Player</a> &middot;
     <a href="/privacy">Privacy Policy</a> &middot;
     <a href="/terms">Terms of Service</a>
+    <p style="margin-top:.9rem; line-height:1.7;">
+      Trimming is done by <a href="https://ffmpeg.org/" target="_blank" rel="noopener">FFmpeg</a>,
+      compiled to WebAssembly by <a href="https://github.com/ffmpegwasm/ffmpeg.wasm" target="_blank" rel="noopener">ffmpeg.wasm</a>
+      and licensed <a href="https://www.gnu.org/licenses/old-licenses/gpl-2.0.html" target="_blank" rel="noopener">GPL&nbsp;v2 or later</a>. It runs on your
+      own machine — no file is uploaded or stored. See
+      <a href="vendor/ffmpeg/NOTICE.md">the attribution notice</a> for versions and sources.
+    </p>
   </footer>
 </div>
 
@@ -224,6 +309,7 @@
    title is what the breadcrumb and the tab title say. Adding a tool means adding a line. */
 var TOOLS = {
   check:    'Will this file play?',
+  trim:     'Trim a video',
   downsize: 'Shrink a video'
 };
 var BASE_TITLE = 'Tools — Theatre Cue Player';
@@ -270,6 +356,13 @@ function clock(sec) {
   var m = Math.floor(sec / 60), s = Math.round(sec % 60);
   if (s === 60) { m++; s = 0; }
   return m + ':' + (s < 10 ? '0' : '') + s;
+}
+/* A position on a timeline, not a length: 0 is a real answer here (clock() reads 0 as
+   "unknown" and prints a dash), and tenths matter when you are marking a cut. */
+function stamp(sec) {
+  if (!isFinite(sec) || sec < 0) sec = 0;
+  var m = Math.floor(sec / 60), s = sec % 60;
+  return m + ':' + (s < 10 ? '0' : '') + s.toFixed(1);
 }
 function esc(s) {
   return String(s).replace(/[&<>"]/g, function (c) {
@@ -359,9 +452,9 @@ function renderCheck(card, file, e, info) {
       : 'The browser could not decode this — usually HEVC/H.265, or an unusual codec inside a familiar-looking file.';
     advice = '<p><strong>' + why + '</strong></p>' +
       '<p>Convert it to <strong>H.264 MP4</strong> (video) or <strong>WAV / MP3</strong> (sound), then use the copy.</p>' +
-      '<p>That has to happen outside the browser, and it is not a limitation of this page: a browser can only ' +
-      're-encode what it can already decode, so no web tool can rescue a file Chrome cannot open. ' +
-      '<strong>CloudConvert</strong> works on a locked-down machine; <strong>HandBrake</strong> is free on Windows or Mac.</p>';
+      '<p>Converting is a job for a proper converter, and there is not one on this page yet. ' +
+      '<strong>CloudConvert</strong> runs in a browser and works on a locked-down school machine; ' +
+      '<strong>HandBrake</strong> is free on Windows or Mac and faster for anything long.</p>';
   } else if (info.isVideo && info.vw && (info.vw * info.vh) > HEAVY_PIXELS) {
     verdict = 'Plays, but heavy'; cls = 'warn';
     advice = '<p>Decodes fine, but at <strong>' + info.vw + ' × ' + info.vh + '</strong> it is bigger than 1080p. ' +
@@ -388,7 +481,277 @@ function renderCheck(card, file, e, info) {
 }
 
 /* ===========================================================================
- * TOOL 2 — downsizer
+ * TOOL 2 — trimmer
+ *
+ * FFmpeg compiled to WebAssembly, doing a stream copy:
+ *     ffmpeg -ss START -to END -i input -c copy -avoid_negative_ts make_zero out
+ * No decoding, no encoding — it copies the existing packets into a new container,
+ * so it takes about a second whatever the length, and the picture is bit-identical.
+ *
+ * THE COST: the engine is a 32 MB download (about 10 MB over the wire). It is fetched
+ * lazily — nobody who never opens this tool ever pays for it — and kept in the Cache
+ * API so it is genuinely once per machine, not once per visit.
+ *
+ * THE CATCH, and the UI says it out loud: a stream copy can only cut at a keyframe, so
+ * the start moves to the nearest one, typically within a second or two. Fixing that
+ * would mean re-encoding, which is the other tool's job.
+ *
+ * Single-threaded core on purpose: the multi-threaded one needs SharedArrayBuffer, which
+ * needs COOP/COEP headers across the whole site. Not worth it to save a second on a
+ * stream copy.
+ *
+ * ESM build, reached by dynamic import(), not the UMD one. ffmpeg.wasm always spawns its
+ * worker as `type: "module"`, where importScripts() does not exist — so the worker falls
+ * back to import()ing the core, and in the UMD bundle webpack has replaced that import
+ * with a stub that throws "Cannot find module". The ESM build keeps a real import.
+ * The import() is also what makes this lazy: nothing here is fetched until a trim starts.
+ * ========================================================================= */
+/* Absolute, because these URLs are resolved inside a worker, where a relative path would
+   resolve against the worker's own location rather than the page's. */
+function abs(p) { return new URL(p, location.href).href; }
+var FF_BASE      = 'vendor/ffmpeg/';
+var FF_WASM_SIZE = 32232419;          // exact size of the vendored ffmpeg-core.wasm
+var FF_CACHE     = 'tcp-ffmpeg-core-0.12.10';
+var TOO_BIG      = 1024 * 1024 * 1024;   // the wasm heap will not take more than this
+var BIG          = 400 * 1024 * 1024;    // large enough to be worth warning about
+
+var tFile = null, tInfo = null, tIn = 0, tOut = 0, tDragging = null, tStopAt = null;
+var ffmpeg = null, ffLoading = null;
+var tVideo  = document.getElementById('t-video');
+var tTrack  = document.getElementById('t-track');
+var tSel    = document.getElementById('t-sel');
+var tInH    = document.getElementById('t-in');
+var tOutH   = document.getElementById('t-out');
+var tHead   = document.getElementById('t-head');
+var tTimes  = document.getElementById('t-times');
+var tPanel  = document.getElementById('t-panel');
+var tStatus = document.getElementById('t-status');
+var tBar    = document.getElementById('t-bar');
+var tOutBox = document.getElementById('t-out');
+var tGo     = document.getElementById('t-go');
+
+document.getElementById('t-warn').innerHTML =
+  'The first trim on this computer downloads a 32&nbsp;MB video engine (about 10&nbsp;MB over the ' +
+  'wire). After that it is cached and every trim is instant. Nothing is uploaded either way — the ' +
+  'engine comes down to you, your video never goes up.';
+
+/* --- loading the engine, with a real progress bar ------------------------- */
+/* The FFmpeg class fetches the core itself and reports nothing while it does, so we
+   fetch it here instead and hand it over as a blob URL. Progress is measured against
+   the known uncompressed size: Content-Length is the *compressed* length when the
+   server gzips, which would run the bar past 100%. */
+async function fetchCore(url, expectedBytes, onBytes) {
+  var cache = null;
+  try { cache = await caches.open(FF_CACHE); } catch (e) { /* private mode: just re-fetch */ }
+  var hit = cache && await cache.match(url);
+  if (hit) return URL.createObjectURL(await hit.blob());
+
+  var res = await fetch(url);
+  if (!res.ok) throw new Error('could not download the video engine (' + res.status + ')');
+  var reader = res.body && res.body.getReader ? res.body.getReader() : null;
+  var blob;
+  if (reader) {
+    var chunks = [], got = 0, r;
+    while (!(r = await reader.read()).done) {
+      chunks.push(r.value); got += r.value.length;
+      if (onBytes) onBytes(got, expectedBytes);
+    }
+    blob = new Blob(chunks);
+  } else {
+    blob = await res.blob();                       // no streaming: no bar, still works
+  }
+  if (cache) { try { await cache.put(url, new Response(blob)); } catch (e) { /* over quota */ } }
+  return URL.createObjectURL(blob);
+}
+
+function loadFFmpeg() {
+  if (ffLoading) return ffLoading;
+  ffLoading = (async function () {
+    tStatus.textContent = 'Getting the video engine ready…';
+    tBar.hidden = false;
+    var wasmURL = await fetchCore(abs(FF_BASE + 'core/ffmpeg-core.wasm'), FF_WASM_SIZE, function (got, total) {
+      tBar.firstElementChild.style.width = Math.min(100, (got / total) * 100).toFixed(1) + '%';
+      tStatus.textContent = 'Downloading the video engine — ' + human(got) + ' of ' + human(total) +
+        '. This happens once on this computer.';
+    });
+    tStatus.textContent = 'Starting the video engine…';
+    var mod = await import(abs(FF_BASE + 'esm/index.js'));
+    var ff = new mod.FFmpeg();
+    await ff.load({ coreURL: abs(FF_BASE + 'core/ffmpeg-core.js'), wasmURL: wasmURL });
+    ffmpeg = ff;
+    return ff;
+  })();
+  ffLoading.catch(function () { ffLoading = null; });   // let a failed load be retried
+  return ffLoading;
+}
+
+/* --- picking the in and out points ---------------------------------------- */
+function tPaint() {
+  var d = tInfo ? tInfo.duration : 0;
+  if (!d) return;
+  var a = (tIn / d) * 100, b = (tOut / d) * 100;
+  tSel.style.left = a + '%'; tSel.style.width = (b - a) + '%';
+  tInH.style.left = a + '%'; tOutH.style.left = b + '%';
+  tInH.setAttribute('aria-valuetext', stamp(tIn));
+  tOutH.setAttribute('aria-valuetext', stamp(tOut));
+  tTimes.innerHTML = stamp(tIn) + ' &rarr; ' + stamp(tOut) +
+    '<small>keeping ' + stamp(tOut - tIn) + ' of ' + stamp(d) + '</small>';
+}
+function tSetIn(v)  { tIn  = Math.max(0, Math.min(v, tOut - 0.1)); tPaint(); }
+function tSetOut(v) { tOut = Math.min(tInfo.duration, Math.max(v, tIn + 0.1)); tPaint(); }
+function tTimeAt(clientX) {
+  var r = tTrack.getBoundingClientRect();
+  return Math.max(0, Math.min(1, (clientX - r.left) / r.width)) * tInfo.duration;
+}
+
+tTrack.addEventListener('pointerdown', function (e) {
+  if (!tInfo) return;
+  var t = tTimeAt(e.clientX);
+  // Grab whichever handle is nearer, so a click anywhere on the bar does something sensible.
+  tDragging = Math.abs(t - tIn) <= Math.abs(t - tOut) ? 'in' : 'out';
+  (tDragging === 'in' ? tSetIn : tSetOut)(t);
+  // Capture keeps a drag alive if the pointer leaves the bar. It is an improvement, not a
+  // requirement, and it throws on a synthetic pointer id — so never let it eat the mark.
+  try { tTrack.setPointerCapture(e.pointerId); } catch (err) { /* drag still works */ }
+});
+tTrack.addEventListener('pointermove', function (e) {
+  if (!tDragging) return;
+  (tDragging === 'in' ? tSetIn : tSetOut)(tTimeAt(e.clientX));
+});
+['pointerup', 'pointercancel'].forEach(function (ev) {
+  tTrack.addEventListener(ev, function () {
+    if (tDragging) tVideo.currentTime = (tDragging === 'in' ? tIn : tOut);
+    tDragging = null;
+  });
+});
+[[tInH, 'in'], [tOutH, 'out']].forEach(function (pair) {
+  pair[0].addEventListener('keydown', function (e) {
+    var step = e.shiftKey ? 1 : 0.1, cur = pair[1] === 'in' ? tIn : tOut;
+    if (e.key === 'ArrowLeft')       (pair[1] === 'in' ? tSetIn : tSetOut)(cur - step);
+    else if (e.key === 'ArrowRight') (pair[1] === 'in' ? tSetIn : tSetOut)(cur + step);
+    else return;
+    e.preventDefault();
+    tVideo.currentTime = pair[1] === 'in' ? tIn : tOut;
+  });
+});
+
+document.getElementById('t-set-in').addEventListener('click', function () { tSetIn(tVideo.currentTime); });
+document.getElementById('t-set-out').addEventListener('click', function () { tSetOut(tVideo.currentTime); });
+document.getElementById('t-play').addEventListener('click', function () {
+  tVideo.currentTime = tIn; tStopAt = tOut; tVideo.play();
+});
+tVideo.addEventListener('timeupdate', function () {
+  if (!tInfo || !tInfo.duration) return;
+  tHead.style.left = ((tVideo.currentTime / tInfo.duration) * 100) + '%';
+  if (tStopAt !== null && tVideo.currentTime >= tStopAt) { tVideo.pause(); tStopAt = null; }
+});
+
+/* --- loading a file -------------------------------------------------------- */
+wireDrop(document.getElementById('t-drop'), document.getElementById('t-file'), function (list) {
+  var f = (list || [])[0];
+  if (!f) return;
+  tOutBox.innerHTML = ''; tBar.hidden = true; tStatus.textContent = 'Reading…';
+  probe(f, 'video').then(function (info) {
+    if (!info.ok || !info.duration || !isFinite(info.duration)) {
+      tPanel.hidden = true;
+      tStatus.innerHTML = '<strong style="color:#ff8b8b;">This browser cannot open that video</strong>, ' +
+        'so there is nothing to show you to trim against. Run it through ' +
+        '<a href="#check" style="color:#ffd700;">“Will this file play?”</a> for what to do with it.';
+      return;
+    }
+    if (f.size > TOO_BIG) {
+      tPanel.hidden = true;
+      tStatus.innerHTML = '<strong style="color:#ff8b8b;">That file is ' + human(f.size) + '</strong>, ' +
+        'which is too large to trim inside a browser tab. Shrink it first, or trim it in a desktop program.';
+      return;
+    }
+    tFile = f; tInfo = info; tIn = 0; tOut = info.duration; tStopAt = null;
+    tVideo.src = URL.createObjectURL(f);
+    tPanel.hidden = false;
+    tStatus.innerHTML = f.size > BIG
+      ? 'Heads up: at ' + human(f.size) + ' this is a big file, and trimming it needs about twice ' +
+        'that much memory. If the tab gives up, that is why.'
+      : '';
+    tPaint();
+    tGo.disabled = false;
+  });
+});
+
+/* --- doing the trim -------------------------------------------------------- */
+tGo.addEventListener('click', function () {
+  trim().catch(function (e) {
+    tStatus.innerHTML = '<strong style="color:#ff8b8b;">That did not work:</strong> ' +
+      esc(e.message || e) + '. If it keeps happening, the file may use something unusual inside.';
+    tGo.disabled = false;
+  });
+});
+
+/* Stream copy into whichever container the packets can legally live in. MP4 is what the
+   audience wants, and H.264/AAC out of a .mov or .mkv copies straight into it; when it
+   will not (VP9, or something exotic), fall back rather than fail. */
+function outputExt(srcExt) {
+  if (['mp4', 'm4v', 'mov', 'mkv', 'avi', 'ts'].indexOf(srcExt) >= 0) return 'mp4';
+  if (['webm', 'ogv'].indexOf(srcExt) >= 0) return srcExt;
+  return 'mp4';
+}
+
+async function trim() {
+  if (tOut - tIn < 0.2) { tStatus.textContent = 'That selection is too short to make a clip out of.'; return; }
+
+  tGo.disabled = true; tOutBox.innerHTML = '';
+  await loadFFmpeg();
+
+  var want = tOut - tIn;
+  tBar.hidden = false; tBar.firstElementChild.style.width = '0%';
+  tStatus.textContent = 'Trimming…';
+  ffmpeg.on('progress', function (p) {
+    var done = (p && p.time ? p.time / 1e6 : 0) / want;
+    tBar.firstElementChild.style.width = Math.max(0, Math.min(100, done * 100)).toFixed(1) + '%';
+  });
+
+  var srcExt = ext(tFile.name) || 'mp4';
+  var inName = 'in.' + srcExt;
+  await ffmpeg.writeFile(inName, new Uint8Array(await tFile.arrayBuffer()));
+
+  var attempts = [outputExt(srcExt)];
+  if (attempts[0] !== 'mkv') attempts.push('mkv');       // the container that takes anything
+  var outName = null, code = 1;
+  for (var i = 0; i < attempts.length && code !== 0; i++) {
+    outName = 'out.' + attempts[i];
+    code = await ffmpeg.exec([
+      '-ss', tIn.toFixed(3), '-to', tOut.toFixed(3), '-i', inName,
+      '-c', 'copy', '-avoid_negative_ts', 'make_zero', outName
+    ]);
+  }
+  if (code !== 0) throw new Error('FFmpeg could not copy this video into a new file');
+
+  var data = await ffmpeg.readFile(outName);
+  var blob = new Blob([data.buffer || data], { type: 'video/' + outName.split('.')[1] });
+  try { await ffmpeg.deleteFile(inName); await ffmpeg.deleteFile(outName); } catch (e) { /* best effort */ }
+
+  // Measure what actually came out, so the keyframe explanation is based on fact.
+  var got = await probe(new File([blob], 'out'), 'video');
+  var actual = got.ok && isFinite(got.duration) ? got.duration : want;
+  var drift  = actual - want;
+
+  tBar.firstElementChild.style.width = '100%';
+  var base = tFile.name.replace(/\.[^.]+$/, '');
+  var url = URL.createObjectURL(blob);
+  tStatus.innerHTML = 'Done — <strong>' + clock(actual) + '</strong>, ' + human(blob.size) + '.' +
+    (Math.abs(drift) > 0.15
+      ? ' <span style="color:#ffcf66;">Your clip is ' + (drift > 0 ? drift.toFixed(1) + 's longer' :
+        Math.abs(drift).toFixed(1) + 's shorter') + ' than the ' + clock(want) + ' you marked.</span> ' +
+        'Video can only be cut cleanly at certain points, so the start moved to the nearest one. ' +
+        'Nothing was re-encoded, so the picture is exactly as it was.'
+      : ' Nothing was re-encoded, so the picture is exactly as it was.');
+  tOutBox.innerHTML = '<a class="dl" download="' + esc(base) + '-trimmed.' + outName.split('.')[1] +
+    '" href="' + url + '">Download the trimmed video</a>' +
+    '<p class="note" style="margin-top:.8rem;">Play it once before you rely on it, then assign it to your cue.</p>';
+  tGo.disabled = false;
+}
+
+/* ===========================================================================
+ * TOOL 3 — downsizer
  *
  * Canvas + MediaRecorder rather than WebCodecs, on purpose: WebCodecs gives you
  * encoded chunks and no container, so an MP4 would need a muxer bundled in.

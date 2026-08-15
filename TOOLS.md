@@ -70,7 +70,52 @@ The checker mirrors the extension's own numbers so the two never disagree. If th
 | Tool | Hash | Engine | Notes |
 |---|---|---|---|
 | Will this file play? | `#check` | native media elements | Decodes the file for real; verdicts: Good to go / Plays, but heavy / Risky / Won't play. Handles images too. |
+| Trim a video | `#trim` | ffmpeg.wasm, stream copy | Lossless and about a second, whatever the length. Cut lands on the nearest keyframe and the tool says so. See §4.1. |
 | Shrink a video | `#downsize` | Canvas + `MediaRecorder` | Real-time encode (a 2-min clip takes 2 min) — the UI says so. MP4 when the browser can write it, WebM otherwise. Only works on files the browser can already decode. |
+
+### 4.1 The trimmer, and the FFmpeg decision that came with it
+
+Built 2026-08-15. The command is a stream copy — no decode, no encode:
+
+    ffmpeg -ss START -to END -i input -c copy -avoid_negative_ts make_zero output
+
+**Decisions, and why:**
+
+- **GPL was accepted, knowingly.** `@ffmpeg/core` on npm is `GPL-2.0-or-later`, not LGPL as
+  first assumed — it is built with `--enable-gpl`. The tools page is therefore a combined work
+  offered under GPL-2.0-or-later. The repo is already public, so this is a licence statement
+  rather than a code change. Full detail in `vendor/ffmpeg/NOTICE.md`.
+- **Single-threaded core.** The multi-threaded build needs `SharedArrayBuffer`, which needs
+  COOP/COEP headers site-wide. Not worth it for a stream copy. **No Netlify header change was
+  needed** — the earlier worry about that was unfounded.
+- **ESM build, via dynamic `import()`, not UMD.** ffmpeg.wasm always spawns its worker as
+  `type: "module"`, where `importScripts` does not exist; the worker then falls back to
+  `import()`ing the core, and in the UMD bundle webpack has replaced that import with a stub
+  that throws `Cannot find module`. The ESM build keeps a real import. This cost an hour —
+  do not "simplify" it back to a UMD `<script>` tag.
+- **All URLs handed to ffmpeg are absolute** (`abs()`). They are resolved inside a worker,
+  where a relative path resolves against the worker's location, not the page's.
+- **Lazy and cached.** The 32 MB engine is fetched only when a trim actually starts, and kept
+  in the Cache API under `FF_CACHE`, so it is once per machine rather than once per visit. The
+  progress bar measures against `FF_WASM_SIZE`, the exact uncompressed byte count, because
+  `Content-Length` is the *compressed* length when the server gzips and the bar would run past
+  100%.
+- **Requires a file the browser can preview.** The in/out points are marked against a real
+  `<video>`, so a file Chrome cannot decode is turned away and sent to the checker — even
+  though FFmpeg itself could open it. Lifting that means a no-preview mode with typed
+  timestamps; not worth it yet.
+- **Keyframe snap is surfaced, not hidden.** The result is measured after the fact and the
+  status line reports the real length, with a plain-language explanation when it differs from
+  what was marked by more than 0.15s.
+- **Container:** stream-copies into MP4 where the packets allow it (mp4/m4v/mov/mkv/avi/ts),
+  keeps webm/ogv as they are, and retries once into `.mkv` if the first mux is rejected.
+
+**Now false, and fixed:** the checker used to say "no web tool can rescue a file Chrome cannot
+open". Shipping FFmpeg makes that untrue — it decodes plenty Chrome will not. The copy now
+just points at CloudConvert and HandBrake without the absolute claim.
+
+**Follow-ups this unlocks** (the 32 MB is already paid for): audio extractor, GIF→MP4, a real
+converter for the "Won't play" verdict, and a non-real-time rewrite of the downsizer.
 
 ## 5. Candidate list
 
@@ -81,8 +126,8 @@ comes up in a school show. Nothing below is committed.
 
 | Tool | Engine | Why |
 |---|---|---|
-| **Trim a video** | ffmpeg.wasm, stream copy (`-c copy`) | The most-wanted one. Lossless and instant — no real-time wait like the downsizer. Cuts heads and tails off a clip. |
-| **Pull the sound out of a video** | ffmpeg.wasm | Common ask: a sound effect that only exists inside an MP4. |
+| ~~Trim a video~~ | ffmpeg.wasm | **Built 2026-08-15** — see §4.1. |
+| **Pull the sound out of a video** | ffmpeg.wasm | Common ask: a sound effect that only exists inside an MP4. Cheap now the engine is in. |
 | **Title / slate cards** | Canvas + `FontFace` | Blackouts, act cards, intermission countdowns, surtitles. No file input at all, so nothing can go wrong. Fonts must be bundled — no Google Fonts CDN call (rule 1). |
 | **Projector test grid** | Canvas | Pairs directly with the extension's surface warping. Pure generator, tiny. |
 | **Split & merge script PDFs** | `pdf-lib` (MIT) | Real stage-management chore, and pdf-lib is small and clean. |
@@ -96,7 +141,13 @@ comes up in a school show. Nothing below is committed.
 | Transparent PNG / colour keying | Fiddly to make foolproof for a 13-year-old. Tolerance sliders are a rabbit hole. |
 | Script watermarker | Easy once pdf-lib is loaded — fold into the PDF tool rather than a separate card. |
 
-### The ffmpeg.wasm decision — not yet made
+### The ffmpeg.wasm decision — MADE 2026-08-15, adopted
+
+Kept below as the record of what was weighed. The outcome and the corrections to it are in
+§4.1: single-threaded, lazily loaded, GPL accepted, no COOP/COEP needed.
+
+<details><summary>The original write-up</summary>
+
 
 Everything in the "worth building" video list wants ffmpeg.wasm, so it is one decision, not four.
 
@@ -117,19 +168,49 @@ it would let the downsizer stop being real-time.
 "this downloads a 25 MB engine the first time — it's cached after that" message. Build the trimmer
 first as the test case; if that lands well, the rest are cheap.
 
+</details>
+
 ## 6. Attribution
 
-The page currently uses no third-party code. The moment it does, the footer gets an attribution
-line naming each library and its licence, and this section lists them.
+Vendored third-party code lives in `vendor/`, served from this origin rather than a CDN — that
+is what keeps rule 1 honest. Every library gets a line in the page footer and a full entry in a
+`NOTICE.md` beside the files.
 
-Planned wording once libraries land:
+| Library | Version | Licence | Notice |
+|---|---|---|---|
+| `@ffmpeg/ffmpeg` | 0.12.15 | MIT | `vendor/ffmpeg/NOTICE.md` |
+| `@ffmpeg/core` (FFmpeg, wasm) | 0.12.10 | **GPL-2.0-or-later** | `vendor/ffmpeg/NOTICE.md` |
 
-> Theatre Cue Player Tools are open-source utilities built for live performance.
-> Powered by FFmpeg.wasm (LGPL), pdf-lib (MIT). No files are uploaded or stored — everything runs
-> on your own machine.
+Because of the core's licence, **the tools page is offered under GPL-2.0-or-later**. The
+extension and the browser build ship no FFmpeg and are unaffected.
 
-## 7. History
+**Outstanding:** vendor the verbatim GPL v2 text as `vendor/ffmpeg/COPYING.GPLv2.txt` —
 
+    curl -o vendor/ffmpeg/COPYING.GPLv2.txt https://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
+
+The footer currently links to gnu.org instead.
+
+## 7. Tests
+
+`playwright_tests/tools.spec.js`, run with the rest of the suite. `playwright.config.js` now
+starts `http-server` on port 8765 first, because the trimmer fetches its engine over HTTP and
+`file://` will not serve it.
+
+The trim test builds its own six-second WebM in the browser with `MediaRecorder` rather than
+committing a fixture — Playwright's Chromium has no proprietary codecs, so it can neither
+write nor read an H.264 MP4. That test is Chromium-only for the same reason; the navigation
+tests run everywhere.
+
+Three real bugs came out of writing it, all of which read fine on inspection: `clock(0)`
+printing a dash where the start time goes, the worker's relative-URL resolution, and the UMD
+worker's stubbed `import()`. A fourth was a weak assertion in the test itself — it checked only
+that the marked-time text had *changed*, which passed while the marks were not registering at
+all. It now asserts the actual numbers.
+
+## 8. History
+
+- **2026-08-15** — Trimmer built on ffmpeg.wasm (§4.1); GPL accepted and attributed; Playwright
+  coverage for the tools page; checker copy corrected where FFmpeg made it untrue.
 - **2026-08-15** — Logo links home; explicit home button; "All tools" button in the nav and at the
   foot of every tool; per-tool `document.title`; `TOOLS` became a title map so adding a tool is one
   line. This file created.
