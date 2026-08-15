@@ -530,7 +530,15 @@ var tBar    = document.getElementById('t-bar');
 var tOutBox = document.getElementById('t-out');
 var tGo     = document.getElementById('t-go');
 
-document.getElementById('t-warn').innerHTML =
+/* Opened from disk rather than served, the engine fetch dies with a bare "Failed to fetch"
+   and every video looks broken. Say so before anyone loses time to it. */
+var FROM_DISK = location.protocol === 'file:';
+var DISK_MSG = '<strong style="color:#ff8b8b;">This page is open straight from a file on ' +
+  'disk</strong>, and browsers will not let a file-on-disk page load the video engine it needs. ' +
+  'Nothing is wrong with your video. Open this page from the website instead — or, if you are ' +
+  'running the site locally, through your local web server address rather than the file itself.';
+
+document.getElementById('t-warn').innerHTML = FROM_DISK ? DISK_MSG :
   'The first trim on this computer downloads a 32&nbsp;MB video engine (about 10&nbsp;MB over the ' +
   'wire). After that it is cached and every trim is instant. Nothing is uploaded either way — the ' +
   'engine comes down to you, your video never goes up.';
@@ -546,8 +554,18 @@ async function fetchCore(url, expectedBytes, onBytes) {
   var hit = cache && await cache.match(url);
   if (hit) return URL.createObjectURL(await hit.blob());
 
-  var res = await fetch(url);
-  if (!res.ok) throw new Error('could not download the video engine (' + res.status + ')');
+  var res;
+  try {
+    res = await fetch(url);
+  } catch (e) {
+    // A bare TypeError here means the request never happened: opened from disk, offline, or
+    // blocked. "Failed to fetch" on its own reads like the video is at fault, and it is not.
+    throw new Error(FROM_DISK
+      ? 'this page cannot load the video engine when it is opened from a file on disk. ' +
+        'Nothing is wrong with your video — open the page from the website instead.'
+      : 'the video engine could not be downloaded. Check your internet connection and try again.');
+  }
+  if (!res.ok) throw new Error('the video engine could not be downloaded (error ' + res.status + ')');
   var reader = res.body && res.body.getReader ? res.body.getReader() : null;
   var blob;
   if (reader) {
@@ -668,20 +686,23 @@ wireDrop(document.getElementById('t-drop'), document.getElementById('t-file'), f
     tFile = f; tInfo = info; tIn = 0; tOut = info.duration; tStopAt = null;
     tVideo.src = URL.createObjectURL(f);
     tPanel.hidden = false;
-    tStatus.innerHTML = f.size > BIG
+    tStatus.innerHTML = FROM_DISK ? DISK_MSG : (f.size > BIG
       ? 'Heads up: at ' + human(f.size) + ' this is a big file, and trimming it needs about twice ' +
         'that much memory. If the tab gives up, that is why.'
-      : '';
+      : '');
     tPaint();
-    tGo.disabled = false;
+    tGo.disabled = FROM_DISK;      // the engine cannot be fetched, so do not offer the button
   });
 });
 
 /* --- doing the trim -------------------------------------------------------- */
 tGo.addEventListener('click', function () {
   trim().catch(function (e) {
-    tStatus.innerHTML = '<strong style="color:#ff8b8b;">That did not work:</strong> ' +
-      esc(e.message || e) + '. If it keeps happening, the file may use something unusual inside.';
+    // Every error thrown below says what actually went wrong and what to do about it, so
+    // there is no generic tail here: a guess about the file is wrong more often than right.
+    tStatus.innerHTML = '<strong style="color:#ff8b8b;">That did not work —</strong> ' +
+      esc(e.message || e);
+    tBar.hidden = true;
     tGo.disabled = false;
   });
 });
@@ -723,7 +744,8 @@ async function trim() {
       '-c', 'copy', '-avoid_negative_ts', 'make_zero', outName
     ]);
   }
-  if (code !== 0) throw new Error('FFmpeg could not copy this video into a new file');
+  if (code !== 0) throw new Error('the video engine could not copy this clip into a new file. ' +
+    'That usually means something unusual inside it — try “Will this file play?” for a closer look.');
 
   var data = await ffmpeg.readFile(outName);
   var blob = new Blob([data.buffer || data], { type: 'video/' + outName.split('.')[1] });

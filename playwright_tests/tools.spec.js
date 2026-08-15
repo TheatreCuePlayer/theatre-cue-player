@@ -1,5 +1,6 @@
 // @ts-check
 import { test, expect } from '@playwright/test';
+import path from 'path';
 
 /**
  * Tools page: the ways out, and the trimmer end to end.
@@ -53,6 +54,17 @@ test.describe('tools page', () => {
     await page.goto(BASE + '#downsize');
     await expect(page.locator('#view-downsize')).toBeVisible();
     await expect(page.locator('#up-btn')).toBeVisible();
+  });
+
+  test('opened from disk, it blames the right thing', async ({ page, browserName }) => {
+    // Opening tools.html by double-clicking it means the engine fetch fails with a bare
+    // "Failed to fetch", which reads as "your video is broken". It is not: every video fails
+    // that way. The page has to say so itself rather than send someone hunting through codecs.
+    test.skip(browserName !== 'chromium', 'one browser is enough to prove the message');
+    const url = 'file:///' + path.resolve('tools.html').replace(/\\/g, '/') + '#trim';
+    await page.goto(url);
+    await expect(page.locator('#t-warn')).toContainText('open straight from a file on disk');
+    await expect(page.locator('#t-warn')).toContainText('Nothing is wrong with your video');
   });
 
   test('trims a video without re-encoding it', async ({ page, browserName }) => {

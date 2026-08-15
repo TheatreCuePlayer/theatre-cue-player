@@ -114,6 +114,12 @@ Built 2026-08-15. The command is a stream copy — no decode, no encode:
 open". Shipping FFmpeg makes that untrue — it decodes plenty Chrome will not. The copy now
 just points at CloudConvert and HandBrake without the absolute claim.
 
+**The page must be served, not opened.** Double-clicking `tools.html` opens it as `file://`,
+where the browser refuses the engine fetch and every video fails identically with
+"Failed to fetch" — which reads as "your video is broken". The trimmer now detects `file:`
+up front, says so, and disables the button; there is a test for the message. To try the page
+locally, run `npx http-server . -p 8765 -c-1` and use the localhost address.
+
 **Follow-ups this unlocks** (the 32 MB is already paid for): audio extractor, GIF→MP4, a real
 converter for the "Won't play" verdict, and a non-real-time rewrite of the downsizer.
 
