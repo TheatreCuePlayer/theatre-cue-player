@@ -82,7 +82,7 @@ The checker mirrors the extension's own numbers so the two never disagree. If th
 |---|---|---|---|
 | Will this file play? | `#check` | native media elements | Decodes the file for real; verdicts: Good to go / Plays, but heavy / Risky / Won't play. Handles images too. |
 | Trim a video | `#trim` | ffmpeg.wasm, stream copy | Lossless and about a second, whatever the length. Cut lands on the nearest keyframe and the tool says so. See §4.1. |
-| Make a video loop seamlessly | `#loop` | ffmpeg.wasm, `xfade` + `acrossfade` | Blends the tail back over the head. **Re-encodes** — the only tool here that does. Output is the selection minus one blend. See §4.4. |
+| Make a video loop endlessly | `#loop` | ffmpeg.wasm, `xfade` + `acrossfade` | Rotates the clip around a chosen cut point so the wrap is a continuous cut and the blend lands mid-clip. **Re-encodes** — the only tool here that does. See §4.4. |
 | Make a title card | `#slate` | Canvas + Google Fonts | Act titles, blackouts, intermission, warnings, surtitles. Live preview, PNG at projector resolutions. No engine, instant. See §4.3. |
 | Get the sound out of a video | `#rip` | ffmpeg.wasm | Copies the audio track out untouched (`-vn -c:a copy`), or re-records as WAV/MP3. Reads the stream first so it can name the codec and detect a silent clip. See §4.2. |
 | Shrink a video | `#downsize` | Canvas + `MediaRecorder` | Real-time encode (a 2-min clip takes 2 min) — the UI says so. MP4 when the browser can write it, WebM otherwise. Only works on files the browser can already decode. |
@@ -202,37 +202,55 @@ complicated than an empty box.
 
 ### 4.4 The seamless looper
 
-Built 2026-08-15. Hold back the first D seconds of the marked stretch and dissolve the tail into
-them; what comes out is `L - D` long and its last frame blends into its first.
+Built 2026-08-15, then **rewritten the same day** because the first version solved the wrong
+problem. Worth reading before changing it.
 
-    [0:v]trim=IN:OUT,setpts=PTS-STARTPTS[sel];
-    [sel]split[a][b];
-    [a]trim=start=D,setpts=PTS-STARTPTS[main];      # L-D long, ends on the original tail
-    [b]trim=end=D,setpts=PTS-STARTPTS[head];        # the original opening
-    [main][head]xfade=transition=fade:duration=D:offset=(L-2D)
+**The technique: rotate around a cut point.** The user picks a moment; everything after it plays
+first, everything before it plays second.
 
-plus `acrossfade=d=D` on a matching `atrim`/`asplit` chain when the clip has sound. The offset is
-measured along `[main]`, which is already D shorter than the selection — that is the easy thing
-to get wrong.
+    source: [   A: 0..C   ][   B: C..L   ]
+    output: [   B: C..L   ][   A: 0..C   ]
+                           ^ the two ORIGINAL ends meet here, mid-clip, hidden by the blend
+    wrap:   last frame of A (just before C) -> first frame of B (at C)
+            those were adjacent in the source, so the wrap is a real continuous cut
 
-- **This is the only tool here that re-encodes**, and it is priced accordingly (see the
-  benchmark in §4.1): about a minute per seven seconds of 1080p output on a desktop. Everything
-  about the UI follows from that:
-  - a time estimate is quoted **before** anything starts, computed from output pixels × the
-    measured rate, and it says an older machine will be slower;
-  - once running, the estimate is **recomputed from real progress**, which beats any guess about
-    the user's CPU;
-  - 720p is offered as the fast way out, and it is labelled as such;
-  - there is a test asserting the estimate appears before the job does. Do not replace it with a
-    spinner.
-- **`L > 2D` is enforced** and explained in words rather than greyed out silently: the end and
-  the beginning have to overlap without meeting in the middle.
-- **The loop preview is the point.** The result plays on repeat in the page, above the download
-  button, so the join can be judged before anyone commits it to a show. Ship no version of this
-  tool where the only way to check the seam is to download and open it.
-- `makeMarkBar()` came out of this: the trimmer and the looper both mark in and out against a
-  preview, so the drag, keyboard nudging, playhead and "play the selection" live in one place
-  with only the caption text differing.
+The point is that the unavoidable discontinuity gets **moved out of the loop seam** and into the
+middle of the clip, where a dissolve reads as a deliberate transition. The wrap itself becomes
+invisible rather than merely softened.
+
+    [0:v]split[v1][v2];
+    [v1]trim=start=C,setpts=PTS-STARTPTS[vb];    # plays first, L-C long
+    [v2]trim=end=C,setpts=PTS-STARTPTS[va];      # plays second, C long
+    [vb][va]xfade=transition=fade:duration=D:offset=(L-C-D)
+
+plus `[ab][aa]acrossfade=d=D` on the matching `atrim`/`asplit` chain when there is sound —
+`acrossfade` overlaps its two inputs itself, so there is no offset to work out there. Output is
+`L - D` long. **`xfade`'s offset is measured along `[vb]`**, which is `L-C` long, so the blend
+starts `D` before it runs out. That is the easy thing to get wrong.
+
+**The first version crossfaded the tail straight into the head** — equivalent to forcing `C = D`.
+It produced a clip that loops, but with a visible dissolve *at* the wrap, every time round. It
+is a strictly worse special case of what is here now. Do not "simplify" back to it.
+
+**Verified by decoding the output, not by trusting the duration.** Playwright's Chromium cannot
+decode H.264, so FFmpeg was asked to extract stills from its own output: with an 8s clip stamped
+with its own timecode and a cut at 4.0s, output t=0 shows `4.0s`, the last frame shows `3.9s`,
+and the frame at t=3.4s shows the original `7.4s` dissolving through the original `0`. Length
+alone would have passed for a clip that never rotated at all.
+
+- **Constraint is `D < C` and `D < L-C`** — both pieces must outlast the blend. Explained in
+  words and the button disables, and it recovers when the cut is moved rather than staying stuck.
+- **The cut defaults to halfway**, which is always valid for any offered blend length.
+- **The bar shows the rearrangement**, not just a position: the two pieces are tinted and
+  labelled "plays first" / "plays second". That picture is doing most of the explaining.
+- **This is the only tool here that re-encodes**, priced per the benchmark in §4.1: about a
+  minute per seven seconds of 1080p on a desktop. So the UI quotes a time **before** starting,
+  recomputes it from real progress once running, and offers 720p as the fast way out. There is a
+  test that the estimate appears before the job does. Never replace it with a spinner.
+- **The loop preview is the point.** The result plays on repeat above the download button, so
+  the join can be judged before anyone commits it to a show.
+- `makeCutBar()` and `makeMarkBar()` share `wireScrub()` for the pointer handling; the trimmer
+  uses two handles, the looper one.
 
 ## 5. Candidate list
 
@@ -328,8 +346,11 @@ all. It now asserts the actual numbers.
 
 ## 8. History
 
-- **2026-08-15** — Seamless looper (§4.4). The mark-in/mark-out bar became `makeMarkBar()`,
-  shared by the trimmer and the looper instead of copied.
+- **2026-08-15** — Looper rewritten (§4.4) to rotate around a user-chosen cut point rather than
+  crossfading the tail into the head: the wrap becomes a continuous cut and the dissolve moves
+  mid-clip. Verified by decoding frames out of the output.
+- **2026-08-15** — Seamless looper first version (§4.4). The mark bar became `makeMarkBar()`,
+  shared by the trimmer and the looper instead of copied; pointer handling is in `wireScrub()`.
 - **2026-08-15** — Slate generator (§4.3), and rule 1 clarified: no *user file* may leave the
   machine, but fetching assets the page needs (fonts) is fine. Long filenames wrap in the facts
   grid instead of painting over the neighbouring cell.

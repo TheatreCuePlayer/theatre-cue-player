@@ -73,8 +73,8 @@ test.describe('tools page', () => {
   });
 
   /** Builds a WebM in the page and hands it to a file input. withSound=false makes a silent one. */
-  async function makeClip(page, inputId, { seconds = 4, withSound = true, name = 'clip.webm' } = {}) {
-    return page.evaluate(async ({ inputId, seconds, withSound, name }) => {
+  async function makeClip(page, inputId, { seconds = 4, withSound = true, name = 'clip.webm', stamped = false } = {}) {
+    return page.evaluate(async ({ inputId, seconds, withSound, name, stamped }) => {
       const canvas = document.createElement('canvas');
       canvas.width = 320; canvas.height = 240;
       const ctx = canvas.getContext('2d');
@@ -96,6 +96,10 @@ test.describe('tools page', () => {
         (function frame() {
           const t = performance.now() - start;
           ctx.fillStyle = `hsl(${(t / 20) % 360} 70% 45%)`; ctx.fillRect(0, 0, 320, 240);
+          if (stamped) {                       // seconds on screen, so a rotation is visible
+            ctx.fillStyle = '#fff'; ctx.font = 'bold 90px sans-serif';
+            ctx.fillText((t / 1000).toFixed(1), 30, 150);
+          }
           if (t < seconds * 1000) requestAnimationFrame(frame); else done();
         })();
       });
@@ -105,7 +109,7 @@ test.describe('tools page', () => {
       const input = document.getElementById(inputId);
       input.files = dt.files;
       input.dispatchEvent(new Event('change'));
-    }, { inputId, seconds, withSound, name });
+    }, { inputId, seconds, withSound, name, stamped });
   }
 
   test('pulls the sound out of a video', async ({ page, browserName }) => {
@@ -139,30 +143,35 @@ test.describe('tools page', () => {
     expect(audio.duration).toBeGreaterThan(1);      // real, playable audio — not an empty file
   });
 
-  test('builds a seamless loop, shorter than the marked stretch by the blend', async ({ page, browserName }) => {
+  test('rotates the clip around the cut point and blends the old ends mid-clip', async ({ page, browserName }) => {
     test.skip(browserName !== 'chromium', 'needs MediaRecorder to build its own fixture');
     test.setTimeout(300_000);
     page.on('console', m => { if (m.type() === 'error') console.log('PAGE ERROR:', m.text()); });
 
     await page.goto(BASE + '#loop');
-    await makeClip(page, 'p-file', { seconds: 6, name: 'campfire.webm' });
+    // The fixture counts seconds on screen, so the output's opening frame proves the rotation.
+    await makeClip(page, 'p-file', { seconds: 8, name: 'campfire.webm', stamped: true });
     await expect(page.locator('#p-panel')).toBeVisible({ timeout: 20_000 });
 
     // A time estimate is quoted BEFORE anything starts. This tool can run for minutes and must
     // never do that behind a silent spinner.
-    await expect(page.locator('#p-estimate')).toContainText('loop at');
-    await expect(page.locator('#p-estimate')).toContainText(/take/);
+    await expect(page.locator('#p-estimate')).toContainText('start and end at');
+    await expect(page.locator('#p-estimate')).toContainText('blend will land');
 
     await page.locator('#p-fade').selectOption('1');
-    const dur = await page.evaluate(() => window.pInfo.duration);
+    const { dur, cut } = await page.evaluate(() => ({
+      dur: window.pInfo.duration, cut: window.pBarCtl.get(),
+    }));
+    expect(cut).toBeGreaterThan(dur / 2 - 0.3);      // defaults to halfway
+    expect(cut).toBeLessThan(dur / 2 + 0.3);
 
     await page.locator('#p-go').click();
     await expect(page.locator('#p-result video.loop-preview')).toBeVisible({ timeout: 240_000 });
     await expect(page.locator('#p-status')).toContainText('Done in');
+    await expect(page.locator('#p-status')).toContainText('starts and ends on what was');
 
     const made = await page.evaluate(async () => {
-      const href = document.querySelector('#p-result a.dl').href;
-      const blob = await (await fetch(href)).blob();
+      const blob = await (await fetch(document.querySelector('#p-result a.dl').href)).blob();
       const v = document.createElement('video');
       v.src = URL.createObjectURL(blob);
       const d = await new Promise(r => {
@@ -174,7 +183,7 @@ test.describe('tools page', () => {
     });
     expect(made.type).toBe('video/mp4');
     expect(made.size).toBeGreaterThan(1000);
-    // The whole contract of the tool: output is the selection minus one blend length.
+    // Length contract: the whole clip, minus one blend.
     expect(made.duration).toBeGreaterThan(dur - 1 - 0.6);
     expect(made.duration).toBeLessThan(dur - 1 + 0.6);
 
@@ -183,22 +192,30 @@ test.describe('tools page', () => {
     await expect(page.locator('#p-result a.dl')).toHaveAttribute('download', 'campfire-loop.mp4');
   });
 
-  test('refuses a stretch too short to blend, and says why', async ({ page, browserName }) => {
+  test('the cut point drives the output, and both halves must beat the blend', async ({ page, browserName }) => {
     test.skip(browserName !== 'chromium', 'needs MediaRecorder to build its own fixture');
     test.setTimeout(120_000);
     await page.goto(BASE + '#loop');
-    await makeClip(page, 'p-file', { seconds: 3, name: 'tiny.webm' });
+    await makeClip(page, 'p-file', { seconds: 6, name: 'tiny.webm' });
     await expect(page.locator('#p-panel')).toBeVisible({ timeout: 20_000 });
 
-    // A 2s blend needs 4s of material; this clip has 3.
-    await page.locator('#p-fade').selectOption('2');
-    await expect(page.locator('#p-estimate')).toContainText('Mark a longer stretch');
+    // Drag the cut hard against the end: the short piece is then thinner than the blend.
+    await page.locator('#p-track').scrollIntoViewIfNeeded();   // it sits below the fold
+    const box = await page.locator('#p-track').boundingBox();
+    await page.mouse.move(box.x + box.width * 0.97, box.y + box.height / 2);
+    await page.mouse.down(); await page.mouse.up();
+    await expect(page.locator('#p-estimate')).toContainText('Move the cut, or shorten the blend');
     await expect(page.locator('#p-go')).toBeDisabled();
 
-    // ...and it recovers when the blend is shortened rather than staying stuck.
-    await page.locator('#p-fade').selectOption('0.5');
-    await expect(page.locator('#p-estimate')).toContainText('loop at');
+    // Recovers by moving the cut, rather than staying stuck.
+    await page.mouse.move(box.x + box.width * 0.5, box.y + box.height / 2);
+    await page.mouse.down(); await page.mouse.up();
+    await expect(page.locator('#p-estimate')).toContainText('start and end at');
     await expect(page.locator('#p-go')).toBeEnabled();
+
+    // The bar shows the rearrangement: the piece after the cut is labelled as playing first.
+    await expect(page.locator('#p-partB')).toContainText('plays first');
+    await expect(page.locator('#p-partA')).toContainText('plays second');
   });
 
   test('a long filename wraps instead of landing on top of the size', async ({ page, browserName }) => {

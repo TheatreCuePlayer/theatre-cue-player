@@ -113,6 +113,13 @@
   .trimhandle::after { content: ''; position: absolute; left: 6px; top: 19px; width: 4px; height: 14px; border-left: 1px solid rgba(0,0,0,.45); border-right: 1px solid rgba(0,0,0,.45); }
   .trimhandle:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
   .playhead { position: absolute; top: 0; bottom: 0; width: 2px; background: #fff; pointer-events: none; }
+  .cutpart {
+    position: absolute; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center;
+    overflow: hidden; white-space: nowrap; pointer-events: none;
+  }
+  .cutpart span { font-size: .72rem; letter-spacing: .04em; text-transform: uppercase; color: #d6dae2; opacity: .85; }
+  .cutpart.a { background: rgba(154,160,255,.16); }
+  .cutpart.b { background: rgba(255,215,0,.15); }
   .markrow { display: flex; flex-wrap: wrap; gap: .8rem; align-items: center; justify-content: space-between; }
   button.mark {
     font: inherit; font-size: .92rem; cursor: pointer; color: #fff; background: #2a2a33;
@@ -194,7 +201,7 @@
           a font, download a picture you can put straight on a cue.</p>
       </button>
       <button class="tool-btn" data-tool="loop">
-        <h2>Make a video loop seamlessly</h2>
+        <h2>Make a video loop endlessly</h2>
         <p>Fire, water, sky, curtains. Blends the end back into the beginning so the clip can run
           all night with no visible jump at the join.</p>
       </button>
@@ -283,7 +290,7 @@
   <!-- ===================== SEAMLESS LOOPER ===================== -->
   <div class="view" id="view-loop" hidden>
     <div class="panel">
-      <h2>Make a video loop seamlessly</h2>
+      <h2>Make a video loop endlessly</h2>
       <p class="lede">A background that has to hold for a whole scene — flames, rain, drifting
         cloud — gives itself away with a jump every time it restarts. This blends the end back
         over the beginning, so there is no join to see.</p>
@@ -295,19 +302,21 @@
 
       <div id="p-panel" hidden>
         <video id="p-video" controls playsinline preload="metadata"></video>
+        <!-- The bar shows the rearrangement, not just a position: the two pieces swap, and
+             they are labelled with the order they will play in. -->
         <div class="trimbar" id="p-track">
-          <div class="trimsel" id="p-sel"></div>
-          <div class="trimhandle" id="p-in"  tabindex="0" role="slider" aria-label="Start of the loop"></div>
-          <div class="trimhandle" id="p-out" tabindex="0" role="slider" aria-label="End of the loop"></div>
+          <div class="cutpart b" id="p-partA"><span>plays second</span></div>
+          <div class="cutpart a" id="p-partB"><span>plays first</span></div>
+          <div class="trimhandle" id="p-cut" tabindex="0" role="slider" aria-label="Where to cut the video"></div>
           <div class="playhead" id="p-head"></div>
         </div>
         <div class="markrow">
-          <button class="mark" id="p-set-in">&larr; Start here</button>
+          <button class="mark" id="p-set-cut">Cut at the playhead</button>
           <span class="marktimes" id="p-times"></span>
-          <button class="mark" id="p-set-out">End here &rarr;</button>
         </div>
-        <p class="note">Pick a stretch where the picture looks much the same at both ends — the
-          blend has less to hide that way.</p>
+        <p class="note">Play the video, find a moment you are happy to start and end on, and cut
+          there — or just drag the marker. Everything after the cut plays first, everything before
+          it plays second, and the two original ends meet in the middle where the blend hides them.</p>
 
         <div class="row">
           <div>
@@ -548,7 +557,7 @@
 var TOOLS = {
   check:    'Will this file play?',
   trim:     'Trim a video',
-  loop:     'Make a video loop seamlessly',
+  loop:     'Make a video loop endlessly',
   slate:    'Make a title card',
   rip:      'Get the sound out of a video',
   downsize: 'Shrink a video'
@@ -847,6 +856,81 @@ function loadFFmpeg(say) {
  * `describe` is the only thing that differs between them — the trimmer talks about
  * what it keeps, the looper about how long the loop comes out.
  * ========================================================================= */
+/* Pointer plumbing shared by both bars: turns a drag anywhere on the track into times.
+   onScrub(t, phase) — t is a time in seconds, or null on 'up'. */
+function wireScrub(track, getDur, onScrub) {
+  var dragging = false;
+  function timeAt(x) {
+    var r = track.getBoundingClientRect();
+    return Math.max(0, Math.min(1, (x - r.left) / r.width)) * getDur();
+  }
+  track.addEventListener('pointerdown', function (e) {
+    if (!getDur()) return;
+    dragging = true;
+    onScrub(timeAt(e.clientX), 'down');
+    // Capture keeps a drag alive if the pointer leaves the bar. It is an improvement, not a
+    // requirement, and it throws on a synthetic pointer id — so never let it eat the mark.
+    try { track.setPointerCapture(e.pointerId); } catch (err) { /* drag still works */ }
+  });
+  track.addEventListener('pointermove', function (e) {
+    if (dragging) onScrub(timeAt(e.clientX), 'move');
+  });
+  ['pointerup', 'pointercancel'].forEach(function (ev) {
+    track.addEventListener(ev, function () {
+      if (dragging) onScrub(null, 'up');
+      dragging = false;
+    });
+  });
+}
+
+/* One marker, not two: where to cut the clip so it can be rearranged around that point. */
+function makeCutBar(p, video, describe) {
+  var track = document.getElementById(p + '-track');
+  var mark  = document.getElementById(p + '-cut');
+  var head  = document.getElementById(p + '-head');
+  var times = document.getElementById(p + '-times');
+  var partA = document.getElementById(p + '-partA');
+  var partB = document.getElementById(p + '-partB');
+  var dur = 0, cut = 0, listener = null;
+
+  function paint() {
+    if (!dur) return;
+    var pct = (cut / dur) * 100;
+    mark.style.left = pct + '%';
+    partA.style.left = '0'; partA.style.width = pct + '%';
+    partB.style.left = pct + '%'; partB.style.width = (100 - pct) + '%';
+    mark.setAttribute('aria-valuetext', stamp(cut));
+    times.innerHTML = describe(cut, dur);
+    if (listener) listener(cut, dur);
+  }
+  function set(v) { cut = Math.max(0, Math.min(dur, v)); paint(); }
+
+  wireScrub(track, function () { return dur; }, function (t, phase) {
+    if (phase === 'up') { video.currentTime = cut; return; }
+    set(t);
+  });
+  mark.addEventListener('keydown', function (e) {
+    var step = e.shiftKey ? 1 : 0.1;
+    if (e.key === 'ArrowLeft') set(cut - step);
+    else if (e.key === 'ArrowRight') set(cut + step);
+    else return;
+    e.preventDefault();
+    video.currentTime = cut;
+  });
+  video.addEventListener('timeupdate', function () {
+    if (dur) head.style.left = ((video.currentTime / dur) * 100) + '%';
+  });
+
+  return {
+    load: function (d) { dur = d; cut = d / 2; paint(); },     // halfway is a sane first answer
+    mark: function () { set(video.currentTime); },
+    onChange: function (fn) { listener = fn; },
+    repaint: paint,
+    get: function () { return cut; },
+    duration: function () { return dur; }
+  };
+}
+
 function makeMarkBar(p, video, describe) {
   var el = {};                                     // p is the id prefix: 't' -> #t-track, #t-sel …
   ['track', 'sel', 'in', 'out', 'head', 'times'].forEach(function (k) {
@@ -866,29 +950,12 @@ function makeMarkBar(p, video, describe) {
   }
   function setIn(v)  { a = Math.max(0, Math.min(v, b - 0.1)); paint(); }
   function setOut(v) { b = Math.min(dur, Math.max(v, a + 0.1)); paint(); }
-  function timeAt(x) {
-    var r = el.track.getBoundingClientRect();
-    return Math.max(0, Math.min(1, (x - r.left) / r.width)) * dur;
-  }
 
-  el.track.addEventListener('pointerdown', function (e) {
-    if (!dur) return;
-    var t = timeAt(e.clientX);
+  wireScrub(el.track, function () { return dur; }, function (t, phase) {
+    if (phase === 'up') { if (drag) video.currentTime = (drag === 'in' ? a : b); drag = null; return; }
     // Grab whichever handle is nearer, so a click anywhere on the bar does something sensible.
-    drag = Math.abs(t - a) <= Math.abs(t - b) ? 'in' : 'out';
+    if (phase === 'down') drag = Math.abs(t - a) <= Math.abs(t - b) ? 'in' : 'out';
     (drag === 'in' ? setIn : setOut)(t);
-    // Capture keeps a drag alive if the pointer leaves the bar. It is an improvement, not a
-    // requirement, and it throws on a synthetic pointer id — so never let it eat the mark.
-    try { el.track.setPointerCapture(e.pointerId); } catch (err) { /* drag still works */ }
-  });
-  el.track.addEventListener('pointermove', function (e) {
-    if (drag) (drag === 'in' ? setIn : setOut)(timeAt(e.clientX));
-  });
-  ['pointerup', 'pointercancel'].forEach(function (ev) {
-    el.track.addEventListener(ev, function () {
-      if (drag) video.currentTime = (drag === 'in' ? a : b);
-      drag = null;
-    });
   });
   [[el.in, 'in'], [el.out, 'out']].forEach(function (pair) {
     pair[0].addEventListener('keydown', function (e) {
@@ -1042,14 +1109,29 @@ async function trim() {
 /* ===========================================================================
  * TOOL 3 — seamless looper
  *
- * Take the marked stretch, hold back the first D seconds, and dissolve the tail
- * into them. What comes out is (L - D) long and its last frame blends into its
- * first, so a player set to loop shows no join.
+ * Rearrange the clip around a cut point the user picks, so the join that cannot be
+ * hidden ends up somewhere it does not matter.
  *
- *   [0:v]trim=IN..OUT            -> the selection, L long
- *        split -> [main] from D  -> L-D long, ends with the original tail
- *              -> [head] to D    -> the original opening
- *   xfade offset=(L-2D)          -> tail dissolves into head
+ *   source: [   A: 0..C   ][   B: C..L   ]
+ *   output: [   B: C..L   ][   A: 0..C   ]
+ *                          ^ the two ORIGINAL ends meet here, mid-clip, and the
+ *                            crossfade hides that meeting
+ *   loop seam: last frame of A (just before C) -> first frame of B (at C).
+ *              Those were adjacent in the source, so the wrap is a genuine
+ *              continuous cut. There is nothing there to disguise.
+ *
+ * That is the whole idea, and it is why this beats crossfading the tail into the
+ * head: that version leaves a visible dissolve AT the wrap, every time round.
+ * Here the wrap is invisible and the dissolve happens mid-clip, where it reads as
+ * a deliberate transition.
+ *
+ *   [0:v]split[s1][s2];
+ *   [s1]trim=start=C -> [B]      (L-C long)
+ *   [s2]trim=end=C   -> [A]      (C long)
+ *   [B][A]xfade=duration=D:offset=(L-C-D)
+ *
+ * Output is (L - D) long. Needs D < C and D < (L - C): each piece must be longer
+ * than the blend, or there is nothing left of it once they overlap.
  *
  * THIS IS THE ONE TOOL HERE THAT CANNOT STREAM-COPY. Blending pixels means a real
  * encode, and in single-threaded wasm that is roughly 8.5x realtime at 1080p on a
@@ -1074,13 +1156,14 @@ document.getElementById('p-warn').innerHTML = FROM_DISK ? DISK_MSG :
   'together cannot be done by copying. That takes real time, and you are told how much before ' +
   'anything starts. Short loops are the happy case.';
 
-var pBarCtl = makeMarkBar('p', pVideo, function (a, b) {
+var pBarCtl = makeCutBar('p', pVideo, function (cut, dur) {
   var d = parseFloat(pFade.value);
-  return stamp(a) + ' &rarr; ' + stamp(b) +
-    '<small>' + (b - a > d ? 'loop comes out ' + stamp(b - a - d) + ' long' : 'too short to blend') + '</small>';
+  return 'cut at ' + stamp(cut) +
+    '<small>' + (Math.min(cut, dur - cut) > d
+      ? 'loop starts and ends here, ' + stamp(dur - d) + ' long'
+      : 'too close to the end for this blend') + '</small>';
 });
-document.getElementById('p-set-in').addEventListener('click', pBarCtl.markIn);
-document.getElementById('p-set-out').addEventListener('click', pBarCtl.markOut);
+document.getElementById('p-set-cut').addEventListener('click', pBarCtl.mark);
 pBarCtl.onChange(function () { pEstimate(); });
 
 /* Output pixels decide the cost, so the estimate has to know the size actually being written. */
@@ -1096,20 +1179,23 @@ function pOutSize() {
 
 function pEstimate() {
   if (!pInfo) return;
-  var L = pBarCtl.getOut() - pBarCtl.getIn(), D = parseFloat(pFade.value);
+  var L = pBarCtl.duration(), C = pBarCtl.get(), D = parseFloat(pFade.value);
   var dim = pOutSize();
-  if (L <= D * 2) {
-    pEst.innerHTML = '<strong style="color:#ffcf66;">Mark a longer stretch.</strong> A ' + D +
-      '-second blend needs at least ' + (D * 2).toFixed(1) + ' seconds to work with, because the ' +
-      'end and the beginning have to overlap without meeting in the middle.';
+  var shorter = Math.min(C, L - C);
+  if (shorter <= D) {
+    pEst.innerHTML = '<strong style="color:#ffcf66;">Move the cut, or shorten the blend.</strong> ' +
+      'Both pieces have to be longer than the ' + D + '-second blend, and the shorter one here is ' +
+      'only ' + stamp(shorter) + '. Drag the marker nearer the middle.';
     pGo.disabled = true;
     return;
   }
   var out = L - D;
   var secs = out * LOOP_RATE_1080 * ((dim.w * dim.h) / (1920 * 1080));
-  pEst.innerHTML = 'This will make a <strong>' + stamp(out) + '</strong> loop at <strong>' +
-    dim.w + ' × ' + dim.h + '</strong>, and should take <strong>' + roughly(secs) + '</strong> — ' +
-    'an older laptop will want two or three times that. Leave this tab in front while it runs.';
+  pEst.innerHTML = 'Your loop will start and end at <strong>' + stamp(C) + '</strong>, run ' +
+    '<strong>' + stamp(out) + '</strong> at <strong>' + dim.w + ' × ' + dim.h + '</strong>, and the ' +
+    'blend will land <strong>' + stamp(L - C - D) + '</strong> in. Should take <strong>' +
+    roughly(secs) + '</strong> — an older laptop will want two or three times that. Leave this tab ' +
+    'in front while it runs.';
   pGo.disabled = FROM_DISK;
 }
 function roughly(secs) {
@@ -1151,9 +1237,12 @@ pGo.addEventListener('click', function () {
 });
 
 async function makeLoop() {
-  var IN = pBarCtl.getIn(), OUT = pBarCtl.getOut();
-  var D = parseFloat(pFade.value), L = OUT - IN, out = L - D;
-  if (L <= D * 2) throw new Error('the marked stretch is too short for a ' + D + '-second blend.');
+  var L = pBarCtl.duration(), C = pBarCtl.get();
+  var D = parseFloat(pFade.value), out = L - D;
+  if (Math.min(C, L - C) <= D) {
+    throw new Error('both pieces have to be longer than the ' + D + '-second blend. Move the cut ' +
+      'nearer the middle, or pick a shorter blend.');
+  }
 
   pGo.disabled = true; pResult.innerHTML = '';
   await loadFFmpeg(function (text, pct) {
@@ -1169,22 +1258,21 @@ async function makeLoop() {
   var hasAudio = !!(await readAudioStream(inName));
   var dim = pOutSize();
 
-  // offset is measured along [main], which is already D shorter than the selection.
-  var offset = (L - 2 * D).toFixed(3), d = D.toFixed(3);
-  var v = '[0:v]trim=start=' + IN.toFixed(3) + ':end=' + OUT.toFixed(3) + ',setpts=PTS-STARTPTS[sel];' +
-          '[sel]split[a][b];' +
-          '[a]trim=start=' + d + ',setpts=PTS-STARTPTS[main];' +
-          '[b]trim=end=' + d + ',setpts=PTS-STARTPTS[head];' +
-          '[main][head]xfade=transition=fade:duration=' + d + ':offset=' + offset +
-          (dim.scale ? '[xf];[xf]scale=' + dim.w + ':' + dim.h + '[v]' : '[v]');
-  var graph = v;
+  // [B] is what follows the cut and plays first; [A] is what preceded it and plays second.
+  // xfade's offset is measured along [B], so the blend starts D before [B] runs out.
+  var c = C.toFixed(3), d = D.toFixed(3), offset = (L - C - D).toFixed(3);
+  var graph = '[0:v]split[v1][v2];' +
+              '[v1]trim=start=' + c + ',setpts=PTS-STARTPTS[vb];' +
+              '[v2]trim=end=' + c + ',setpts=PTS-STARTPTS[va];' +
+              '[vb][va]xfade=transition=fade:duration=' + d + ':offset=' + offset +
+              (dim.scale ? '[xf];[xf]scale=' + dim.w + ':' + dim.h + '[v]' : '[v]');
   var map = ['-map', '[v]'];
   if (hasAudio) {
-    graph += ';[0:a]atrim=start=' + IN.toFixed(3) + ':end=' + OUT.toFixed(3) + ',asetpts=PTS-STARTPTS[asel];' +
-             '[asel]asplit[c][e];' +
-             '[c]atrim=start=' + d + ',asetpts=PTS-STARTPTS[amain];' +
-             '[e]atrim=end=' + d + ',asetpts=PTS-STARTPTS[ahead];' +
-             '[amain][ahead]acrossfade=d=' + d + '[aout]';
+    // acrossfade joins its two inputs and overlaps them by d — no offset to work out.
+    graph += ';[0:a]asplit[a1][a2];' +
+             '[a1]atrim=start=' + c + ',asetpts=PTS-STARTPTS[ab];' +
+             '[a2]atrim=end=' + c + ',asetpts=PTS-STARTPTS[aa];' +
+             '[ab][aa]acrossfade=d=' + d + '[aout]';
     map = map.concat(['-map', '[aout]', '-c:a', 'aac', '-b:a', '192k']);
   }
 
@@ -1215,7 +1303,8 @@ async function makeLoop() {
   var took = Math.round((Date.now() - pStarted) / 1000);
   pBar.firstElementChild.style.width = '100%';
   pStatus.innerHTML = 'Done in ' + roughly(took) + ' — <strong>' + stamp(out) + '</strong> at ' +
-    dim.w + ' × ' + dim.h + ', ' + human(blob.size) + '.';
+    dim.w + ' × ' + dim.h + ', ' + human(blob.size) + '. It starts and ends on what was ' +
+    stamp(C) + ' in the original.';
   // The preview is the point: it plays on repeat, so the join can be judged before anyone
   // commits the file to a show.
   pResult.innerHTML =
