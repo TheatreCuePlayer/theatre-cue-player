@@ -3,6 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Google tag (gtag.js). This runs on the WEBSITE only. It is not in the extension
+     and not in the browser build of the app, and the Analytics section below says so
+     in those words -- if this tag ever moves into the app, that section is wrong. -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-NR4CJQJ7D0"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-NR4CJQJ7D0');
+</script>
 <title>Privacy Policy — Theatre Cue Player</title>
 <style>
   :root {
@@ -64,13 +75,14 @@
 
   <h1>Privacy Policy</h1>
   <p class="lede">Theatre Cue Player — browser extension for live theatre cue playback</p>
-  <p class="updated"><strong>Effective:</strong> 9 August 2026 &nbsp;·&nbsp; <strong>Last updated:</strong> 9 August 2026</p>
+  <p class="updated"><strong>Effective:</strong> 9 August 2026 &nbsp;·&nbsp; <strong>Last updated:</strong> 15 August 2026</p>
 
   <div class="card">
     <p class="big"><strong>The short version.</strong> Theatre Cue Player has no account system, no
     server, and no database. Your shows, sound and video stay on your own computer and — if you
-    choose to use Google Drive — in your own Google Drive. Nothing is sent to the developer.
-    No information about students is collected, ever.</p>
+    choose to use Google Drive — in your own Google Drive. Nothing from your work is sent to the
+    developer. No information about students is collected, ever. This website counts its own page
+    visits with Google Analytics; the software you run your show with does not.</p>
   </div>
 
   <h2>Who this is from</h2>
@@ -153,8 +165,26 @@
   Drive, and remain yours.</p>
 
   <h2>Analytics</h2>
-  <p><strong>Theatre Cue Player currently collects no analytics of any kind.</strong> No usage data
-  is gathered and no analytics service is contacted.</p>
+  <p>Two separate things are described here, and the difference between them is the whole point:
+  <strong>this website</strong>, and <strong>the software you run your show with</strong>. The
+  website is measured. The software is not.</p>
+
+  <h3>This website</h3>
+  <p>The pages at theatrecueplayer.app — the landing page, the tools page, the terms, and this
+  policy — use Google Analytics. It tells the developer how many people find the site, which pages
+  they read, and roughly which country and which kind of device they arrived on. It sets cookies in
+  your browser and reports to Google, who process that data on the developer's behalf.</p>
+  <p>It counts visits to pages, not people. It is not used to identify you, it is never connected to
+  anything you do inside a show, and nothing from it is sold or shared. If you would rather not be
+  counted, any content blocker or Google's own
+  <a href="https://tools.google.com/dlpage/gaoptout" target="_blank" rel="noopener">opt-out
+  add-on</a> will stop it, and every page here works exactly the same with it blocked.</p>
+
+  <h3>The extension and the app</h3>
+  <p><strong>Theatre Cue Player itself collects no analytics of any kind.</strong> There is no
+  analytics code in the Chrome extension, and none in the browser version you run a show from. No
+  usage data is gathered and no analytics service is contacted while you are working. Google
+  Analytics does not follow you from this website into the software.</p>
   <p>The software contains an optional, switched-off capability to report two anonymous counts — that
   a show was created, and that second-screen output was opened. It is off on every installation and
   would only ever send anything if someone deliberately switched it on. Should that ever change:</p>
@@ -176,6 +206,10 @@
   collect personal information from children.</p>
   <p>It is designed to be usable by a school that permits no outbound network access at all: in
   folder mode, the extension makes no network connections whatsoever.</p>
+  <p>The analytics on this website are a property of the website and not of the software: a student
+  operating a show is not measured by anything, because there is nothing in the software to measure
+  them with. A school that blocks theatrecueplayer.app entirely loses nothing — the extension does
+  not need this site to run.</p>
 
   <h2>The mailing list, if you join it</h2>
   <p>Theatre Cue Player is free for the 2026–27 school year, and the app may offer you a link to
