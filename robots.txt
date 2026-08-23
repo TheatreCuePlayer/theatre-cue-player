@@ -1,0 +1,10 @@
+# Everything is crawlable on purpose.
+#
+# Old builds and tutorial drafts are kept online so existing links keep working,
+# but they carry <meta name="robots" content="noindex">. Blocking them here
+# would be counterproductive: a page that is never crawled is never read, so the
+# noindex would never be seen and the URL could stay in the index anyway.
+User-agent: *
+Allow: /
+
+Sitemap: https://theatrecueplayer.app/sitemap.xml
