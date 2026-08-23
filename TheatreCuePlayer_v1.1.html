@@ -9,6 +9,12 @@ v1.1 - Last Updated July 16, 2026
 <html lang="en">
 
 <head>
+<!-- Canonical URL. Netlify already redirects http/https and www/non-www to one
+     host, but a redirect does not collapse QUERY STRINGS - and Facebook appends
+     ?fbclid=... to every outbound link someone clicks. Without this tag each of
+     those is a separate URL to a crawler. -->
+<link rel="canonical" href="https://theatrecueplayer.app/theatrecueplayer_v1.1">
+
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Theatre Cue Player v1.1</title>
