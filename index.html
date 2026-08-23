@@ -401,6 +401,66 @@
         .lead-card h3 { color: #ffd700; font-size: 1.05rem; margin-bottom: 0.4rem; }
         .lead-card p { color: #ccc; font-size: 0.9rem; line-height: 1.5; margin: 0; }
     </style>
+<!-- Structured data: tells Google what this actually is, which matters more for
+     entity understanding than for rich results (most software rich results were
+     retired). Deliberately no aggregateRating - inventing ratings you do not have
+     is a manual-action risk with no upside. Keep softwareVersion in step with
+     manifest.json. -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Theatre Cue Player",
+  "url": "https://theatrecueplayer.app",
+  "description": "Cue playback software for school theatre. Fires sound and video cues during a performance, runs in Chrome including on a locked-down Chromebook, and works offline. A browser version needs no installation at all; a Chrome extension adds video cues, projection mapping and second-screen output.",
+  "applicationCategory": "MultimediaApplication",
+  "applicationSubCategory": "Show control and cue playback",
+  "operatingSystem": "Chrome OS, Web",
+  "browserRequirements": "Requires Google Chrome or another Chromium-based browser",
+  "softwareVersion": "2.3.0",
+  "downloadUrl": "https://chromewebstore.google.com/detail/theatre-cue-player/meanilaokadjkgoflflcbpgpgcebamdm",
+  "installUrl": "https://chromewebstore.google.com/detail/theatre-cue-player/meanilaokadjkgoflflcbpgpgcebamdm",
+  "isAccessibleForFree": true,
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD",
+    "description": "Free for the 2026-27 school year. Audio-only use stays free."
+  },
+  "author": {
+    "@type": "Person",
+    "name": "Kevin Patrick",
+    "url": "https://theatrecueplayer.app"
+  },
+  "publisher": {
+    "@type": "Person",
+    "name": "Kevin Patrick"
+  },
+  "image": "https://theatrecueplayer.app/images/tcp-icon-512.png",
+  "audience": {
+    "@type": "EducationalAudience",
+    "educationalRole": "teacher"
+  },
+  "featureList": [
+    "Cue list with GO button",
+    "Audio cues with fades and crossfades",
+    "Auto-follow and auto-continue",
+    "Infinite loops",
+    "Instant-fire hotkeys",
+    "Video cues",
+    "Projection mapping",
+    "Second-screen projector output",
+    "Text cues with crawl and roll",
+    "Built-in sound editor",
+    "PDF cue sheets",
+    "Google Sheets export",
+    "Google Drive storage",
+    "Works offline",
+    "Runs from a USB drive with no installation"
+  ],
+  "license": "https://theatrecueplayer.app/terms"
+}
+</script>
 </head>
 
 <body>
