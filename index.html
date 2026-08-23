@@ -319,6 +319,22 @@
             box-shadow: 0 0 0 3px #ffd700, 0 6px 20px rgba(255, 215, 0, 0.35);
         }
         .cta-install:hover { background: #1e7e34; }
+
+        .chooser { max-width: 900px; margin: 0 auto 2.5rem; }
+        .chooser h2 { color: #ffd700; font-size: 1.3rem; margin-bottom: 1rem; }
+        .chooser-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.1rem; text-align: left;
+        }
+        .chooser-col {
+            background: rgba(255,255,255,.06); border: 1px solid #3f3f47;
+            border-radius: 12px; padding: 1.3rem 1.4rem; display: flex; flex-direction: column;
+        }
+        .chooser-col h3 { color: #ffd700; font-size: 1.1rem; margin-bottom: .2rem; }
+        .chooser-what { color: #fff; font-weight: 600; margin-bottom: .6rem; }
+        .chooser-col p { color: #bfc3cb; line-height: 1.6; }
+        .chooser-col .btn { margin: 1rem 0 0; align-self: flex-start; }
+        .hero-sub { color: #cfd3da; margin-top: .8rem; }
         .price-note { color: #cfd3da; font-size: 0.98rem; margin-top: 0.9rem; }
         .price-note strong { color: #ffd700; }
         .feature-cols {
@@ -408,20 +424,45 @@
             <a href="https://docs.google.com/forms/d/e/1FAIpQLSd39m2mW22l95mEehJAsRt94zZbHMtMeaaMN_38mtkSNl0-9Q/viewform" class="btn jump" target="_blank" rel="noopener">Mailing List</a>
         </nav>
 
+
+        <!-- The split, before anything else. The first question a teacher has is "will this
+             work on my machine", and the answer IS which version they want. Burying that
+             under the extension's feature list made people install the wrong one. -->
+        <section class="chooser" id="versions">
+            <h2>Two ways to run it</h2>
+            <div class="chooser-grid">
+                <div class="chooser-col">
+                    <h3>Chrome Extension</h3>
+                    <p class="chooser-what">Audio, video and projection</p>
+                    <p>The full thing: video cues, projection mapping, second-screen output, text
+                        cues, the sound editor, and optional Google Drive. Installs from the Chrome
+                        Web Store.</p>
+                    <a href="https://chromewebstore.google.com/detail/theatre-cue-player/meanilaokadjkgoflflcbpgpgcebamdm"
+                        class="btn cta-install" target="_blank" rel="noopener"><img
+                            src="images/tcp-icon-128.png" alt="" width="24" height="24">Add to Chrome</a>
+                </div>
+                <div class="chooser-col">
+                    <h3>Browser version</h3>
+                    <p class="chooser-what">Audio only &mdash; nothing to install</p>
+                    <p>Opens from a link, or runs off a USB stick. No installation, no admin rights,
+                        no internet &mdash; so it still works on machines where <strong>extensions
+                        themselves are blocked</strong>, which plenty of districts do.</p>
+                    <a href="/theatrecueplayer_v1.1" class="btn" target="_blank">Open it now</a>
+                </div>
+            </div>
+            <p class="price-note"><strong>Both are free for the whole 2026&ndash;27 school year.</strong><br>
+                After that, only second-screen projection output will carry a fee. Audio-only shows
+                stay free.</p>
+        </section>
+
         <!-- PRIMARY: the extension. This is the product now; keep it first. The browser
              build below is deliberately secondary. -->
         <div class="version-card current hero-card" id="extension">
             <div class="hero-head">
                 <div class="version-number">Theatre Cue Player Extension</div>
                 <span class="version-status status-stable">Now on the Chrome Web Store</span>
-                <div style="margin: 1.4rem 0 0.2rem;">
-                    <a href="https://chromewebstore.google.com/detail/theatre-cue-player/meanilaokadjkgoflflcbpgpgcebamdm" class="btn cta-install" target="_blank" rel="noopener"><img
-                            src="images/tcp-icon-128.png" alt="" width="26" height="26">Add to Chrome
-                        &mdash; free</a>
-                </div>
-                <p class="price-note"><strong>Free for the whole 2026&ndash;27 school year.</strong><br>
-                    After that, only second-screen projection output will carry a fee. Audio-only
-                    shows stay free.</p>
+                <p class="hero-sub">Everything the browser version does, plus video, projection
+                    and the sound editor.</p>
             </div>
 
             <div class="feature-cols">
@@ -487,6 +528,15 @@
                     server &mdash; nothing you make is sent to the developer. Full detail is in the
                     <a href="/privacy" style="color: #ffd700;">privacy policy</a>.</p>
             </div>
+
+            <!-- The second CTA, after the case has been made. The first one is up in the
+                 chooser, for people who already know which version they want. -->
+            <div style="text-align: center; margin-top: 1.6rem;">
+                <a href="https://chromewebstore.google.com/detail/theatre-cue-player/meanilaokadjkgoflflcbpgpgcebamdm"
+                    class="btn cta-install" target="_blank" rel="noopener"><img
+                        src="images/tcp-icon-128.png" alt="" width="26" height="26">Add to Chrome
+                    &mdash; free</a>
+            </div>
         </div>
 
 
@@ -508,10 +558,15 @@
                 <div class="version-number">Rather not install anything?</div>
                 <span class="version-status status-beta">Browser version &mdash; audio only</span>
             </div>
-            <p style="margin: 1.1rem 0;">The original browser version runs from a link with nothing to
-                install. It does everything above <strong>except video and projection</strong>, which
-                makes it useful on a locked-down machine, or for trying the workflow in ten seconds.
-                It is also what the video guides below were recorded on.</p>
+            <p style="margin: 1.1rem 0;">Cue list, GO, fades, auto-follow, loops, hotkeys, a
+                waveform editor for trimming and fades, PDF cue sheets and whole-show zip packages
+                &mdash; everything except <strong>video, projection, text cues, the effects editor
+                and Google Drive</strong>, which are the extension's.</p>
+            <p style="margin: 1.1rem 0;">What only this version can do: run with <strong>nothing
+                installed at all</strong>. From a link, or off a USB stick, with no admin rights and
+                no internet. If your district blocks extension installs &mdash; and many do &mdash;
+                this is the one that still works. It is also what the video guides below were
+                recorded on.</p>
             <div style="text-align: center;">
                 <a href="/theatrecueplayer_v1.1" class="btn" target="_blank">Open in the browser</a>
             </div>
