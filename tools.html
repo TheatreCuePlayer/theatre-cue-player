@@ -18,12 +18,12 @@
 
   gtag('config', 'G-NR4CJQJ7D0');
 </script>
-<title>Tools — Theatre Cue Player</title>
-<meta name="description" content="Free browser tools for school theatre: check whether a file will play in your show, and shrink oversized video so it projects smoothly.">
+<title>Free Video &amp; Sound Tools for Theatre — Nothing Uploaded</title>
+<meta name="description" content="Check whether a file will play, shrink video for a projector, trim, loop, or pull out the audio. Free, runs in your browser — nothing is uploaded.">
 <link rel="icon" type="image/png" sizes="32x32" href="images/tcp-icon-32.png">
 <link rel="icon" type="image/png" sizes="128x128" href="images/tcp-icon-128.png">
-<meta property="og:title" content="Theatre Cue Player — Tools">
-<meta property="og:description" content="Free browser tools for school theatre.">
+<meta property="og:title" content="Free Video &amp; Sound Tools for Theatre">
+<meta property="og:description" content="Fix a video that will not play or stutters when projected. Free, in your browser, nothing uploaded.">
 <meta property="og:image" content="https://theatrecueplayer.app/images/tcp-icon-512.png">
 <meta property="og:url" content="https://theatrecueplayer.app/tools">
 <style>
@@ -173,6 +173,15 @@
   .dl { display: inline-block; margin-top: .8rem; background: #ffd700; color: #1a1a1a; font-weight: 700;
         padding: .7rem 1.3rem; border-radius: 8px; text-decoration: none; }
   code { background: rgba(255,255,255,.09); padding: .1em .4em; border-radius: 4px; font-size: .92em; }
+
+  .prose { max-width: 46rem; margin: 3rem auto 0; text-align: left; }
+  .prose h2 {
+    color: #ffd700; font-size: 1.15rem; margin: 2rem 0 .6rem;
+    padding-top: 1.4rem; border-top: 1px solid #3a3a42;
+  }
+  .prose h2:first-child { border-top: 0; padding-top: 0; margin-top: 0; }
+  .prose p { color: #bfc3cb; line-height: 1.7; margin-bottom: .8rem; }
+  .prose a { color: #ffd700; }
   footer { text-align: center; color: #8d93a0; font-size: .87rem; margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid #3a3a42; }
   footer a { color: #8d93a0; }
 </style>
@@ -186,8 +195,8 @@
     <a class="home-link" href="/" title="Back to the Theatre Cue Player home page">
       <img src="images/tcp-icon-128.png" alt="Theatre Cue Player — home">
     </a>
-    <h1>Tools</h1>
-    <p class="tagline">Free, and everything runs on your own machine.</p>
+    <h1>Free tools for show media</h1>
+    <p class="tagline">Everything runs on your own computer. Nothing is uploaded, ever.</p>
   </header>
 
   <nav class="pagenav">
@@ -231,6 +240,41 @@
           on a Chromebook. Runs on this machine, nothing uploaded.</p>
       </button>
     </div>
+
+    <section class="prose">
+      <h2>Why won't my video play in Chrome?</h2>
+      <p>Almost always one of two things. Either it is an <strong>HEVC / H.265</strong> file, which
+        is what newer phones and cameras record by default, or it is in a container Chrome will not
+        open — usually <code>.mkv</code> or <code>.avi</code>. Both play perfectly well in VLC on
+        your own laptop, which is exactly why the problem tends to surface for the first time in the
+        booth, on the night.</p>
+      <p>The fix is to convert it to <strong>H.264 MP4</strong>. Drop the file into
+        <a href="#check">Will this file play?</a> above and it will tell you which of the two you
+        have, and what to do about it.</p>
+
+      <h2>Why does my video stutter when it is projected?</h2>
+      <p>Usually because the file is far bigger than anything the projector can show. A 4K clip off
+        a phone carries four times the pixels of a 1080p projector, and a Chromebook's decoder
+        cannot keep up — so you get dropped frames on a picture twelve feet wide, with an audience
+        watching.</p>
+      <p>Re-exporting it near the size it is actually shown at fixes it, and nobody in the house can
+        tell the difference. <a href="#downsize">Shrink a video</a> does that here, with nothing to
+        install.</p>
+
+      <h2>Nothing here is uploaded</h2>
+      <p>Every one of these tools runs inside your browser, on your own machine. Your files are
+        never sent anywhere — not to this site, not to anybody else's server. That is not a privacy
+        slogan, it is the only way a tool like this is usable on a district-managed laptop, where
+        sending student media to an unknown website is usually against policy outright.</p>
+      <p>It also means they keep working with no internet connection at all, once the page has
+        loaded.</p>
+
+      <h2>Made for school theatre</h2>
+      <p>These exist because <a href="/">Theatre Cue Player</a> spent a year telling teachers to
+        "convert it to H.264 MP4" and then leaving them to work out how — on a Chromebook, with
+        nothing installable and no admin rights. They are free, and they are useful whether or not
+        you ever run a show with the cue player itself.</p>
+    </section>
   </div>
 
   <!-- ===================== CHECKER ===================== -->
