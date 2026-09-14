@@ -177,17 +177,28 @@ function launch() {
   stopSpin();
   say('Choose a file, then this window will close.');
   try {
-    var view = new google.picker.DocsView(google.picker.ViewId.DOCS)
+    /* Browse My Drive the way drive.google.com shows it: start at the top and open
+       folders. The old single view listed EVERY folder in Drive at once, flat — each
+       show's audio/, video/ and backups/ folders among them — so the list was full of
+       folders you never see at the top of My Drive. (Kevin, 2026-09-13.) */
+    var myDrive = new google.picker.DocsView(google.picker.ViewId.DOCS)
       .setMimeTypes(MIME[opts.accept])
       .setIncludeFolders(true)
-      .setSelectFolderEnabled(false);
+      .setSelectFolderEnabled(false)
+      .setParent('root');
+
+    /* Files other people shared with you: where a zip a colleague sent is most likely. */
+    var shared = new google.picker.DocsView(google.picker.ViewId.DOCS)
+      .setMimeTypes(MIME[opts.accept])
+      .setOwnedByMe(false);
 
     var b = new google.picker.PickerBuilder()
       .setOAuthToken(token)
       .setDeveloperKey(API_KEY)
       .setAppId(APP_ID)
       .setOrigin(window.location.protocol + '//' + window.location.host)
-      .addView(view)
+      .addView(myDrive)
+      .addView(shared)
       .addView(new google.picker.DocsUploadView())
       .setTitle(TITLE[opts.accept])
       .setCallback(onPick);
