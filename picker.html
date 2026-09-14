@@ -91,7 +91,19 @@ var APP_ID = '580777106671';
 
 var MIME = {
   audio: 'audio/mpeg,audio/mp3,audio/wav,audio/x-wav,audio/ogg,audio/mp4,audio/aac,audio/flac,audio/webm',
-  video: 'video/mp4,video/webm,video/ogg,image/jpeg,image/png'
+  video: 'video/mp4,video/webm,video/ogg,image/jpeg,image/png',
+  /* A show or cue file: a zip, or a .tcpshow / .json. Drive labels a .tcpshow someone
+     uploaded by hand as a generic binary or text file (it does not know the extension),
+     so those types are included; the extension checks the file name after the pick.
+     Added for Theatre Cue Player 2.4.0 (Load Cue File / Import a show from Drive).
+     Older extension versions never ask for it, so this can go live first. */
+  show: 'application/zip,application/x-zip-compressed,application/x-zip,application/json,application/octet-stream,text/plain'
+};
+
+var TITLE = {
+  audio: 'Choose audio for your cue',
+  video: 'Choose a video or picture for your cue',
+  show: 'Choose a show or cue file'
 };
 
 var lede = document.getElementById('lede');
@@ -134,7 +146,7 @@ window.addEventListener('message', function (ev) {
   if (!msg || msg.type !== 'tcp-picker-init') return;
   if (typeof msg.token !== 'string' || !msg.token) return fail('No usable sign-in token.');
   token = msg.token;
-  opts = { accept: msg.accept === 'video' ? 'video' : 'audio', multiple: !!msg.multiple };
+  opts = { accept: MIME[msg.accept] ? msg.accept : 'audio', multiple: !!msg.multiple };
   lede.textContent = 'Opening your Drive…';
   loadPicker();
 });
@@ -177,7 +189,7 @@ function launch() {
       .setOrigin(window.location.protocol + '//' + window.location.host)
       .addView(view)
       .addView(new google.picker.DocsUploadView())
-      .setTitle('Choose audio for your cue')
+      .setTitle(TITLE[opts.accept])
       .setCallback(onPick);
 
     if (opts.multiple) b.enableFeature(google.picker.Feature.MULTISELECT_ENABLED);
