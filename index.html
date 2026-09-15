@@ -585,11 +585,22 @@
                     follows you from the classroom to the booth, and cue sheets can be exported
                     straight to Google Sheets. It asks for a <strong>single per-file
                     permission</strong> (<code>drive.file</code>) which lets it read and write only
-                    the show files it creates and the cue sheets it makes for you. <strong>It cannot
-                    see anything else in your Drive</strong>, and there is no Theatre Cue Player
+                    the show files and cue sheets it creates for you, and a sound, video or show file
+                    you explicitly choose from your Drive for it. <strong>It cannot see anything else
+                    in your Drive</strong>, and there is no Theatre Cue Player
                     server &mdash; nothing you make is sent to the developer. Full detail is in the
                     <a href="/privacy" style="color: #ffd700;">privacy policy</a>.</p>
             </div>
+
+            <!-- School web filters. Keep in step with DrivePicker.UNREACHABLE_MESSAGE in the
+                 extension (js/sync/drive-picker.js) and the store listing: all three give the same
+                 advice. The picker page is picker.html in this repo. -->
+            <p style="max-width: 760px; margin: 1rem auto 0; font-size: 0.95rem; opacity: 0.9;">
+                <strong>For school IT:</strong> choosing a file from Google Drive inside the extension
+                opens a small page on <code>theatrecueplayer.app</code>, so that address needs to be
+                allowed through your web filter along with Google. If it's blocked, everything else
+                in the extension still works &mdash; pick the file from the computer instead: on a
+                Chromebook, Google Drive is in the file dialog's sidebar.</p>
 
             <!-- The second CTA, after the case has been made. The first one is up in the
                  chooser, for people who already know which version they want. -->
