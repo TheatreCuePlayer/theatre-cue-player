@@ -169,6 +169,10 @@
 .ho .pace th { background: var(--h-accent); color: #fff; text-align: left; padding: 4px 5px; font-family: "Barlow Condensed", sans-serif; font-size: 10pt; }
 .ho .pace td { border: 1px solid var(--h-rule); padding: 4px 5px; vertical-align: top; }
 .ho .pace td:first-child { background: #1d4f96; color: #fff; font-weight: 700; text-align: center; width: 1%; }
+.ho .cuesheet { font-size: 8.4pt; margin-bottom: 4px; }
+.ho .cuesheet th { text-align: left; background: var(--h-tint); color: var(--h-accent); font-family: "Barlow Condensed", sans-serif; font-size: 9.6pt; padding: 3px 5px; border: 1px solid var(--h-rule); }
+.ho .cuesheet td { padding: 4px 5px; border: 1px solid var(--h-rule); vertical-align: top; }
+.ho .cuesheet td:first-child, .ho .cuesheet td:last-child { white-space: nowrap; }
 .ho .qrs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: auto; padding-top: 8px; }
 .ho figure { margin: 0; display: grid; justify-items: center; gap: 3px; }
 .ho figure svg { width: 0.72in; height: 0.72in; }
@@ -782,8 +786,11 @@ body.view-present .kit-nav a { padding: 4px 11px; font-size: .82rem; }
         <li><b>Zip submission:</b> project file + audio files + annotated script + README.txt with source credits</li>
       </ul>
 
-      <h2>Script annotation format</h2>
-      <p class="mono">[SFX 2: Thunder_Heavy.wav — start at line 3; fade out 4s after line 6; vol -3dB] "He looked up at the sky."</p>
+      <h2>Sound cue sheet</h2>
+      <table class="cuesheet">
+        <thead><tr><th>Cue</th><th>Sound file</th><th>Starts</th><th>Ends</th><th>Level</th></tr></thead>
+        <tbody><tr><td>SFX 2</td><td>Thunder_Heavy.wav</td><td>Line 3: “He looked up at the sky.”</td><td>Fades out over 4 s, after line 6</td><td>−3 dB</td></tr></tbody>
+      </table>
 
       <h2>File naming convention</h2>
       <p class="mono">01_Alley_Ambience_loop.wav<br>02_Footsteps_gravel.wav<br>03_Door_squeak_fadeout.wav</p>
