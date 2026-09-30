@@ -138,14 +138,15 @@
 .ho { --h-ink: #1a2130; --h-muted: #4d586a; --h-rule: #cfd5df; --h-accent: #1d5bbf; --h-tint: #eaf1fc; --h-warn: #fff4e2;
   color: var(--h-ink); font-family: "Atkinson Hyperlegible", "Segoe UI", Verdana, sans-serif; }
 .ho .hpage { background: #fff; color: var(--h-ink); width: 100%; max-width: 8.5in; margin: 0 auto; padding: 0.4in 0.5in 0.35in;
-  display: flex; flex-direction: column; gap: 8px; font-size: 9.2pt; line-height: 1.34; box-sizing: border-box; }
+  display: flex; flex-direction: column; gap: 6px; font-size: 9pt; line-height: 1.3; box-sizing: border-box; }
 .ho h1 { font-family: "Barlow Condensed", "Arial Narrow", sans-serif; font-size: 26pt; font-weight: 700; margin: 0; color: var(--h-accent); line-height: 1; }
 .ho h2 { font-family: "Barlow Condensed", "Arial Narrow", sans-serif; font-size: 12.5pt; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
-  color: var(--h-accent); margin: 10px 0 4px; padding-bottom: 2px; border-bottom: 1.5px solid var(--h-accent); }
+  color: var(--h-accent); margin: 8px 0 3px; padding-bottom: 2px; border-bottom: 1.5px solid var(--h-accent); }
 .ho h3 { font-family: "Barlow Condensed", "Arial Narrow", sans-serif; font-size: 12pt; font-weight: 700; margin: 0 0 2px; }
 .ho p, .ho ul { margin: 0 0 4px; }
 .ho ul { padding-left: 1.1em; }
 .ho li { margin-bottom: 2px; }
+.ho .steps { margin: 0 0 4px; padding-left: 1.3em; }
 .ho .hhead { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; border-bottom: 2px solid var(--h-ink); padding-bottom: 6px; flex-wrap: wrap; }
 .ho .hsub { color: var(--h-muted); font-style: italic; margin: 2px 0 0; }
 .ho .hurl { font-family: "Barlow Condensed", sans-serif; font-weight: 700; font-size: 15pt; margin: 0; }
@@ -170,7 +171,7 @@
 .ho .pace td:first-child { background: #1d4f96; color: #fff; font-weight: 700; text-align: center; width: 1%; }
 .ho .qrs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: auto; padding-top: 8px; }
 .ho figure { margin: 0; display: grid; justify-items: center; gap: 3px; }
-.ho figure svg { width: 0.82in; height: 0.82in; }
+.ho figure svg { width: 0.72in; height: 0.72in; }
 .ho figcaption { font-size: 8.4pt; color: var(--h-muted); font-weight: 700; text-align: center; }
 .ho .hfoot { display: flex; justify-content: space-between; gap: 12px; font-size: 8.8pt; color: var(--h-muted); border-top: 1px solid var(--h-rule); padding-top: 6px; }
 .ho .hfoot b { color: var(--h-accent); font-size: 10.5pt; }
@@ -438,10 +439,10 @@ body.view-present .kit-nav a { padding: 4px 11px; font-size: .82rem; }
     <div class="lanes">
       <div class="lane say"><p class="label">Say</p>
         <p>This is the simplest way in. Point it at a folder of sounds and every file becomes a cue, <b>in file-name order</b>. That's why file naming matters: <code>01_Alley_Ambience_loop.wav</code>, <code>02_Footsteps_gravel.wav</code>.</p>
-        <p>Save the page itself (<kbd>Ctrl</kbd> <kbd>S</kbd>) and it runs off a USB stick with no internet. It doesn't update itself, which is a feature: it stays the same all semester.</p>
+        <p>To put it on a thumb drive: on the website, right-click <b>Open it now</b> ▸ <b>Save link as…</b> and pick the drive. Not <kbd>Ctrl</kbd> <kbd>S</kbd>: inside TCP that's TCP's own Save. The saved file runs with no internet and doesn't update itself, which is a feature: it stays the same all semester. The handout has the steps, Chromebook included.</p>
       </div>
       <div class="lane screen"><p class="label">Screen</p><p>Browser version tab.</p></div>
-      <div class="lane do"><p class="label">Do</p><p>Load the sample audio folder. Press <kbd>Space</kbd> for GO a couple of times. Press <kbd>Esc</kbd> for STOP ALL. Export the show package as a zip.</p></div>
+      <div class="lane do"><p class="label">Do</p><p>On the website tab, right-click <b>Open it now</b> ▸ <b>Save link as…</b> to show the thumb-drive step (cancel, or save to your USB stick). Then in the browser version: load the sample audio folder, <kbd>Space</kbd> for GO a couple of times, <kbd>Esc</kbd> for STOP ALL, export the show package as a zip.</p></div>
     </div>
     <div class="pit"><p class="label">Pitfall: the folder permission</p>
       <p>Chrome asks permission to use the folder, and asks again in a new session. Tell students <b>that prompt is expected: click Allow.</b> Also: sound files must be types Chrome plays (MP3, WAV, OGG, M4A, FLAC). WMA won't play.</p>
@@ -481,7 +482,7 @@ body.view-present .kit-nav a { padding: 4px 11px; font-size: .82rem; }
     <div class="lanes">
       <div class="lane say"><p class="label">Say</p>
         <p><b>GO</b> fires the next cue and moves on. Drill it early: timing is the whole job.</p>
-        <p><b>Auto Continue vs Auto Follow</b> is the most common confusion. Auto Continue starts the next cue <i>at the same moment</i> (rain plus thunder together). Auto Follow starts the next cue <i>when this one ends</i> (a chain). Same words as QLab.</p>
+        <p><b>Auto Continue vs Auto Follow</b> is the most common confusion. Auto Continue starts the next cue <i>at the same moment</i> (rain plus thunder together). Auto Follow starts the next cue <i>when this one completes</i>, after all its loops (a chain); an Infinite Loop never Auto-Follows. Same words as QLab.</p>
         <p><b>A fade cue targets another cue</b>: it doesn't play anything itself, it reaches over and changes a cue that's running. "Stop cue when done" is QLab's checkbox too.</p>
         <p>Loops (a number, or infinite), hotkeys for instant sound effects, the waveform editor for trims and fade-ins/outs, and <kbd>Ctrl</kbd> <kbd>Z</kbd> for everything.</p>
         <p>Teaching note from your handout: <b>more sound isn't better design.</b></p>
@@ -679,15 +680,16 @@ body.view-present .kit-nav a { padding: 4px 11px; font-size: .82rem; }
         <li><b>Extensions:</b> managed Chromebooks often block installs. IT can allow or push the extension from the Google Admin console.</li>
         <li><b>Google Drive mode:</b> allow <b>theatrecueplayer.app</b> through the web filter, and the app in Google Admin.</li>
         <li><b>Chromebooks that wipe at sign-out</b> lose shows saved on the computer. Use Drive or a USB stick.</li>
+        <li><b>USB drives and downloads:</b> some districts block them on student Chromebooks. Check before you plan on thumb drives.</li>
       </ul>
 
       <h2>Feature highlights</h2>
       <ul>
-        <li><b>Drag sound files onto the cue list:</b> each becomes a cue named after its file. (Browser version: Load Audio Folder, in file-name order.)</li>
-        <li><b>GO / Spacebar:</b> fires the next cue. Drill it early; timing is everything.</li>
-        <li><b>Auto-Continue</b> starts the next cue at the same moment. <b>Auto-Follow</b> starts it when this one ends.</li>
+        <li><b>Drag sound files onto the cue list</b> (video and pictures too, in Video mode), and each becomes a cue named after its file. (Browser version: Load Audio Folder, in file-name order.)</li>
+        <li><b>GO / Spacebar:</b> fires the next cue.</li>
+        <li><b>Auto-Continue</b> starts the next cue at the same moment. <b>Auto-Follow</b> starts the next cue when this one completes, after all its loops. An Infinite Loop never Auto-Follows.</li>
         <li><b>Fade cues</b> target another cue and fade it to a level; "stop cue when done", as in QLab.</li>
-        <li><b>Loops</b>, <b>hotkeys</b> for instant effects, and a <b>waveform editor</b> for trims and fades.</li>
+        <li><b>Loops</b>, <b>hotkeys</b> for instant effects, a <b>waveform editor</b> for trims and fades, and (extension) a <b>Sound Editor</b> that sends the edited sound right back to the cue list.</li>
         <li><b>Edit Mode off</b> = show mode. <b>Help Mode</b> explains every control; teach students to look there first.</li>
         <li><b>Backups:</b> the last 20 cue lists, one each time a show opens. <b>Export Project to Zip</b> packs the cue list and every file.</li>
         <li><b>Video</b> (extension): H.264 MP4 near 1080p. Phone video looking dark? Use the cue's HDR fix.</li>
@@ -713,11 +715,16 @@ body.view-present .kit-nav a { padding: 4px 11px; font-size: .82rem; }
       </table>
       <p class="note">The same keys in both versions.</p>
 
-      <h2>Teaching notes</h2>
-      <p class="hl"><b>More sound ≠ better design.</b> Excessive or irrelevant cues dilute impact. Quality and intentional placement always win.</p>
-      <p><b>Auto-Continue vs. Auto-Follow:</b> clarify the difference early. It's the most common point of confusion.</p>
-      <p><b>Copyright:</b> students document ALL audio sources in a README.txt inside their zip. If they can't confirm a license, they can't use it.</p>
-      <p><b>File naming matters:</b> <code>01_Alley_Ambience_loop.wav</code>. Numbered prefixes keep cue order aligned with the script.</p>
+      <h2>Take it offline</h2>
+      <p><b>Browser version on a thumb drive:</b></p>
+      <ol class="steps">
+        <li>On <b>theatrecueplayer.app</b>, right-click <b>Open it now</b> and choose <b>Save link as…</b></li>
+        <li>Pick the thumb drive and save. On a Chromebook, the USB drive is in the save dialog's left sidebar.</li>
+        <li>To run it, double-click the file (on a Chromebook, in the <b>Files</b> app). It opens in Chrome; if another browser opens it, right-click the file ▸ <b>Open with</b> ▸ Chrome.</li>
+        <li>Keep the sound folder on the same drive and use <b>Load Audio Folder</b> from there.</li>
+      </ol>
+      <p class="note">Not Ctrl + S: inside TCP that's TCP's own Save. The saved copy never updates, so it stays the same all semester; save it again for a new version.</p>
+      <p><b>The extension</b> works with no internet once installed, in folder mode. Google Drive mode needs internet only to sync.</p>
       <p><b>Sound files:</b> MP3, WAV, OGG, M4A, FLAC. Not WMA.</p>
 
       <h2>License</h2>
@@ -836,8 +843,8 @@ body.view-present .kit-nav a { padding: 4px 11px; font-size: .82rem; }
     { q: 'Q3', t: 'Browser version, 4 minutes', real: 10, planned: 8,
       say: ['A folder of sounds becomes cues, in file-name order',
         'Name files 01_, 02_, 03_',
-        'Ctrl+S the page: runs off a USB stick, never changes'],
-      do: 'Load the sample folder → Space ×2 → Esc → export the zip.',
+        'To USB: right-click Open it now ▸ Save link as… (not Ctrl+S)'],
+      do: 'Show Save link as… → load the sample folder → Space ×2 → Esc → export the zip.',
       watch: 'Chrome asks to use the folder each session: click Allow. WMA won’t play.',
       screen: 'Browser-version tab', late: 'Skip the zip.' },
     { q: 'Q4', t: 'Extension first run', real: 15, planned: 12,
@@ -850,7 +857,7 @@ body.view-present .kit-nav a { padding: 4px 11px; font-size: .82rem; }
       screen: 'Extension: storage choice, Your Shows' },
     { q: 'Q5', t: 'QLab’s vocabulary', real: 21, planned: 17,
       say: ['GO. Drill it; timing is the job',
-        'Auto Continue = together. Auto Follow = after it ends',
+        'Auto Continue = together. Auto Follow = after it ends, all loops done',
         'A fade cue targets a running cue; “stop cue when done”',
         'Loops, hotkeys, waveform trims, Ctrl+Z · More sound ≠ better design'],
       do: 'AC pair → AF chain → fade under the music, 0% / 3 s, GO → loop → hotkey → ∿ trim → undo.',
