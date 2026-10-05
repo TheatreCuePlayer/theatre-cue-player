@@ -43,9 +43,9 @@ goes wrong in a school show.
 
 ## 3. How the page is wired
 
-Single file, single `<script>`. The only dependency is the FFmpeg engine in `vendor/ffmpeg/`,
-reached by dynamic `import()` so the page still loads instantly for anyone who never opens a
-tool that needs it.
+Single file, single `<script>`. The dependencies are the FFmpeg engine in `vendor/ffmpeg/` and
+the two PDF libraries in `vendor/pdfjs/` and `vendor/pdf-lib/`, all reached by dynamic
+`import()` so the page still loads instantly for anyone who never opens a tool that needs them.
 
 - `TOOLS` — an object at the top of the script: `id → title`. **Adding a tool is one line here.**
 - `show(name)` / `route()` — hash router. Toggles `#view-index` against `#view-<id>`, rebuilds the
@@ -86,6 +86,7 @@ The checker mirrors the extension's own numbers so the two never disagree. If th
 | Make a title card | `#slate` | Canvas + Google Fonts | Act titles, blackouts, intermission, warnings, surtitles. Live preview, PNG at projector resolutions. No engine, instant. See §4.3. |
 | Get the sound out of a video | `#rip` | ffmpeg.wasm | Copies the audio track out untouched (`-vn -c:a copy`), or re-records as WAV/MP3. Reads the stream first so it can name the codec and detect a silent clip. See §4.2. |
 | Shrink a video | `#downsize` | Canvas + `MediaRecorder` | Real-time encode (a 2-min clip takes 2 min) — the UI says so. MP4 when the browser can write it, WebM otherwise. Only works on files the browser can already decode. |
+| Split PDF pages down the middle | `#split` | pdf.js (draw) + pdf-lib (write) | Lays every two-up sheet on top of the others so the gap shows, finds it, lets you drag the line. Crops rather than redraws — lossless, same file size. See §4.5. |
 
 ### 4.1 The trimmer, and the FFmpeg decision that came with it
 
@@ -252,6 +253,51 @@ alone would have passed for a clip that never rotated at all.
 - `makeCutBar()` and `makeMarkBar()` share `wireScrub()` for the pointer handling; the trimmer
   uses two handles, the looper one.
 
+### 4.5 The PDF page splitter
+
+Built 2026-10-05. Modelled on deftpdf's "split PDF down the middle", minus the upload: that one
+sends the file to a server, and §2 rule 1 rules that out. Everything here happens in the tab.
+
+**The copy is deliberately generic** — two-up sheets, booklets, spreads. It does not name any
+particular kind of document or say where the PDF came from. Keep it that way (decided
+2026-10-05).
+
+- **Crop, never redraw.** pdf-lib copies each two-up sheet twice and gives each copy a smaller
+  CropBox — one left of the line, one right. No image is decoded or re-encoded, so the halves
+  are exactly as sharp as the original. MediaBox, TrimBox, BleedBox and ArtBox are set to the
+  same rectangle, because some printers go by the MediaBox alone and would print the whole sheet.
+- **One `copyPages()` call, each sheet listed twice.** A single call shares the sheet's image
+  between its two copies; two calls would store it twice and double the file. The output of the
+  test fixture is 7.8 KB from 7.5 KB.
+- **The line is in display terms**, a fraction across the page as you see it. `spHalves()`
+  converts it, and `/Rotate` is where that bites: on a sheet stored portrait with `/Rotate 90`,
+  "across" on screen is *up* the page in the file, so it is cut along y. Tested.
+- **The layered picture** is the brightness of up to 40 two-up sheets averaged, then
+  contrast-stretched. Text that moves from page to page averages to grey; the gap, which is in
+  the same place on every sheet, stands out. A slider steps through single pages to check one.
+- **Finding the gap** (`spFindGap`), in order: a narrow dark stripe far darker than the text
+  around it (a fold, a shadow, a printed rule) wins outright. Otherwise the widest clean run of
+  columns, and inside it the point where the right page's text starts minus the left page's own
+  margin — because ragged lines leave extra white on one side and the run's middle is not the
+  fold. If that point falls outside the run (mirrored margins), the run's middle. It only has to
+  land close enough for a person to see whether it is right.
+- **Pages taller than wide are left whole** by default, so a single cover page is not cut in two.
+  A checkbox turns that off.
+- **The result is drawn back** with pdf.js — the first four pages, as thumbnails above the
+  download — as proof the file opens and the halves are the right way round.
+
+**Three things that cost time, all now guarded:**
+
+- **pdf.js 6's modern build calls `Map.prototype.getOrInsertComputed`**, which only the newest
+  browsers have. Playwright's Chromium failed on it; so would a Chromebook a few versions behind.
+  The **legacy** build is vendored instead. See `vendor/pdfjs/NOTICE.md`.
+- **`intent: 'print'` on every render.** With the default `'display'`, pdf.js paces its drawing
+  with `requestAnimationFrame`, which a background tab never fires — switching tabs while a long
+  PDF was being layered froze it at "1 of N" until the tab came back.
+- **Each load takes a ticket** (`spTicket`). Two loads used to share one document, and one would
+  `cleanup()` a page the other was mid-way through drawing, which hung pdf.js for good. Also: in
+  pdf.js 6 it is the *loading task*, not the document, that has `destroy()`.
+
 ## 5. Candidate list
 
 Sourced partly from a Gemini brainstorm (2026-08-15). Ordered by how often the problem actually
@@ -265,7 +311,8 @@ comes up in a school show. Nothing below is committed.
 | ~~Pull the sound out of a video~~ | ffmpeg.wasm | **Built 2026-08-15** — see §4.2. |
 | ~~Title / slate cards~~ | Canvas + Google Fonts | **Built 2026-08-15** — see §4.3. Fonts are fetched, not bundled: rule 1 was clarified rather than broken. |
 | **Projector test grid** | Canvas | Pairs directly with the extension's surface warping. Pure generator, tiny. |
-| **Split & merge script PDFs** | `pdf-lib` (MIT) | Real stage-management chore, and pdf-lib is small and clean. |
+| ~~Split PDF pages down the middle~~ | pdf.js + pdf-lib | **Built 2026-10-05** — see §4.5. |
+| **Merge PDFs** | `pdf-lib` (MIT) | Real stage-management chore. pdf-lib is now vendored, so this is cheap. |
 
 ### ~~Seamless video looper~~ — BUILT 2026-08-15, see §4.4
 
@@ -317,6 +364,8 @@ is what keeps rule 1 honest. Every library gets a line in the page footer and a 
 |---|---|---|---|
 | `@ffmpeg/ffmpeg` | 0.12.15 | MIT | `vendor/ffmpeg/NOTICE.md` |
 | `@ffmpeg/core` (FFmpeg, wasm) | 0.12.10 | **GPL-2.0-or-later** | `vendor/ffmpeg/NOTICE.md` |
+| `pdfjs-dist` (legacy build) | 6.4.299 | Apache-2.0 | `vendor/pdfjs/NOTICE.md` |
+| `pdf-lib` | 1.17.1 | MIT | `vendor/pdf-lib/NOTICE.md` |
 
 Because of the core's licence, **the tools page is offered under GPL-2.0-or-later**. The
 extension and the browser build ship no FFmpeg and are unaffected.
@@ -345,6 +394,9 @@ that the marked-time text had *changed*, which passed while the marks were not r
 all. It now asserts the actual numbers.
 
 ## 8. History
+
+- **2026-10-05** — PDF page splitter (§4.5): pdf.js and pdf-lib vendored, both lazily loaded.
+  Four Playwright tests, with the fixture built in the page by pdf-lib.
 
 - **2026-08-15** — Looper rewritten (§4.4) to rotate around a user-chosen cut point rather than
   crossfading the tail into the head: the wrap becomes a continuous cut and the dissolve moves

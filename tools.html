@@ -19,7 +19,7 @@
   gtag('config', 'G-NR4CJQJ7D0');
 </script>
 <title>Free Video &amp; Sound Tools for Theatre — Nothing Uploaded</title>
-<meta name="description" content="Check whether a file will play, shrink video for a projector, trim, loop, or pull out the audio. Free, runs in your browser — nothing is uploaded.">
+<meta name="description" content="Check whether a file will play, shrink video for a projector, trim, loop, pull out the audio, or split PDF pages down the middle. Free, runs in your browser — nothing is uploaded.">
 <link rel="icon" type="image/png" sizes="32x32" href="images/tcp-icon-32.png">
 <link rel="icon" type="image/png" sizes="128x128" href="images/tcp-icon-128.png">
 <meta property="og:title" content="Free Video &amp; Sound Tools for Theatre">
@@ -167,6 +167,26 @@
   }
   .slate-stage canvas { display: block; width: 100%; height: auto; }
 
+  /* --- page splitter: the layered pages, with the line on top ---------------- */
+  .sp-stage {
+    position: relative; margin: 1.2rem 0 .8rem; background: #fff; border-radius: 10px;
+    overflow: hidden; border: 1px solid #3f3f47; touch-action: none; user-select: none; cursor: ew-resize;
+  }
+  .sp-stage canvas { display: block; width: 100%; height: auto; }
+  .sp-line { position: absolute; top: 0; bottom: 0; width: 2px; margin-left: -1px; background: #ffd700;
+             box-shadow: 0 0 0 1px rgba(0,0,0,.55); pointer-events: none; }
+  .sp-grip { position: absolute; top: 50%; width: 18px; height: 56px; margin: -28px 0 0 -9px;
+             background: #ffd700; border-radius: 5px; box-shadow: 0 1px 4px rgba(0,0,0,.5); cursor: ew-resize; }
+  .sp-grip:focus-visible { outline: 2px solid #1a1a1a; outline-offset: 2px; }
+  .sp-tag { position: absolute; top: .6rem; font-size: .75rem; font-weight: 700; letter-spacing: .04em;
+            text-transform: uppercase; background: rgba(26,26,26,.82); color: #ffd700;
+            padding: .25rem .6rem; border-radius: 999px; pointer-events: none; }
+  .sp-thumbs { display: flex; gap: .8rem; margin: 1rem 0 .4rem; flex-wrap: wrap; }
+  .sp-thumbs figure { flex: 1; min-width: 9rem; max-width: 16rem; }
+  .sp-thumbs canvas { width: 100%; height: auto; display: block; background: #fff; border-radius: 6px; border: 1px solid #3f3f47; }
+  .sp-thumbs figcaption { color: #8d93a0; font-size: .8rem; text-align: center; margin-top: .3rem; }
+  input[type=range] { accent-color: #ffd700; width: 100%; }
+
   .bar { height: 10px; background: #2a2a33; border-radius: 999px; overflow: hidden; margin: .8rem 0 .4rem; }
   .bar > i { display: block; height: 100%; width: 0; background: #00e676; transition: width .2s; }
   .note { color: #8d93a0; font-size: .87rem; line-height: 1.6; }
@@ -238,6 +258,11 @@
         <h2>Shrink a video</h2>
         <p>Re-encode an oversized clip down to a sensible projection size, so it stops stuttering
           on a Chromebook. Runs on this machine, nothing uploaded.</p>
+      </button>
+      <button class="tool-btn" data-tool="split">
+        <h2>Split PDF pages down the middle</h2>
+        <p>Two pages side by side on every sheet? Cut each one into two separate pages, in order,
+          with no loss of sharpness.</p>
       </button>
     </div>
 
@@ -584,6 +609,77 @@
     <div class="exit-row"><button class="navbtn to-index">&larr; Done — back to all tools</button></div>
   </div>
 
+  <!-- ===================== PDF PAGE SPLITTER ===================== -->
+  <div class="view" id="view-split" hidden>
+    <div class="panel">
+      <h2>Split PDF pages down the middle</h2>
+      <p class="lede">Some PDFs put two pages side by side on every sheet — a booklet, a spread
+        from a book, a two-up printout. This cuts each sheet down the middle and saves the halves
+        as separate pages, in order. The pages are cropped, not redrawn, so they come out exactly
+        as sharp as they went in.</p>
+      <div class="drop" id="sp-drop" tabindex="0" role="button">
+        <strong>Drop a PDF here, or click to choose</strong>
+        <span>Nothing is uploaded. It is split on this computer.</span>
+      </div>
+      <input type="file" id="sp-file" accept="application/pdf,.pdf">
+
+      <div id="sp-panel" hidden>
+        <div class="results"><div class="card"><div class="card-body" style="padding-top:1.1rem;">
+          <div class="facts" id="sp-facts"></div>
+        </div></div></div>
+
+        <!-- Every page laid on top of the others: whatever the pages share — the gap between
+             the two halves — stands out, and that is where the line belongs. -->
+        <div class="sp-stage" id="sp-stage">
+          <canvas id="sp-canvas"></canvas>
+          <span class="sp-tag" id="sp-tagL" style="left:.6rem;">1st</span>
+          <span class="sp-tag" id="sp-tagR" style="right:.6rem;">2nd</span>
+          <div class="sp-line" id="sp-line"></div>
+          <div class="sp-grip" id="sp-grip" tabindex="0" role="slider" aria-label="Where to cut each page"></div>
+        </div>
+
+        <div class="markrow">
+          <button class="mark" id="sp-auto">Find the gap for me</button>
+          <span class="marktimes" id="sp-pos"></span>
+          <button class="mark" id="sp-mid">Exact middle</button>
+        </div>
+        <p class="note" id="sp-help">Every page is laid on top of the others, so the gap between the
+          two halves shows up as a clear stripe. Drag the gold line onto it, or use the arrow keys
+          for small steps.</p>
+
+        <div class="row">
+          <div style="flex:1; min-width:14rem;">
+            <label class="field" for="sp-view">Showing</label>
+            <input type="range" id="sp-view" min="0" max="1" value="0">
+            <span class="note" id="sp-viewlabel"></span>
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label class="field" for="sp-order">Page order</label>
+            <select id="sp-order">
+              <option value="lr" selected>Left half first, then right</option>
+              <option value="rl">Right half first, then left</option>
+            </select>
+          </div>
+          <div>
+            <label class="field" for="sp-tall">Single pages</label>
+            <label class="check"><input type="checkbox" id="sp-tall" checked> Leave pages that are taller than wide whole</label>
+          </div>
+          <button class="go" id="sp-go">Split the PDF</button>
+        </div>
+
+        <div class="bar" id="sp-bar" hidden><i></i></div>
+        <p class="note" id="sp-status"></p>
+        <div id="sp-result"></div>
+      </div>
+
+      <p class="note" id="sp-warn" style="margin-top:1rem;"></p>
+    </div>
+    <div class="exit-row"><button class="navbtn to-index">&larr; Done — back to all tools</button></div>
+  </div>
+
   <footer>
     <a href="/">Theatre Cue Player</a> &middot;
     <a href="/privacy">Privacy Policy</a> &middot;
@@ -595,6 +691,12 @@
       and licensed <a href="https://www.gnu.org/licenses/old-licenses/gpl-2.0.html" target="_blank" rel="noopener">GPL&nbsp;v2 or later</a>. It runs on your
       own machine — no file is uploaded or stored. See
       <a href="vendor/ffmpeg/NOTICE.md">the attribution notice</a> for versions and sources.
+    </p>
+    <p style="margin-top:.6rem; line-height:1.7;">
+      PDF pages are drawn by <a href="https://github.com/mozilla/pdf.js" target="_blank" rel="noopener">pdf.js</a>
+      (Apache&nbsp;2.0, <a href="vendor/pdfjs/NOTICE.md">notice</a>) and split by
+      <a href="https://github.com/Hopding/pdf-lib" target="_blank" rel="noopener">pdf-lib</a>
+      (MIT, <a href="vendor/pdf-lib/NOTICE.md">notice</a>), both served from this site.
     </p>
   </footer>
 </div>
@@ -619,7 +721,8 @@ var TOOLS = {
   loop:     'Make a video loop endlessly',
   slate:    'Make a title card',
   rip:      'Get the sound out of a video',
-  downsize: 'Shrink a video'
+  downsize: 'Shrink a video',
+  split:    'Split PDF pages down the middle'
 };
 var BASE_TITLE = 'Tools — Theatre Cue Player';
 
@@ -1881,6 +1984,428 @@ async function shrink() {
   dOut.innerHTML = '<a class="dl" download="' + esc(base) + '-' + dim.h + 'p.' + outExt + '" href="' + url + '">Download the shrunk video</a>' +
     '<p class="note" style="margin-top:.8rem;">Play it once before you rely on it, then assign it to your cue.</p>';
   dGo.disabled = false;
+}
+
+/* ===========================================================================
+ * TOOL — PDF page splitter
+ *
+ * Two libraries, two jobs, and neither touches the network with the file:
+ *   pdf.js  draws pages on screen, so they can be layered and the line placed.
+ *   pdf-lib writes the result. Every sheet is copied twice and each copy is given
+ *           a smaller CropBox/MediaBox — one the left of the line, one the right.
+ *
+ * Cropping, not redrawing, is the point: the images inside are never decoded or
+ * re-encoded, so the halves are exactly as sharp as the original and the file comes
+ * out about the same size. The two copies of a sheet are made in one copyPages()
+ * call, which is what makes them share a single copy of the image rather than two.
+ *
+ * The line is placed in DISPLAY terms (fraction across the page as you see it).
+ * spHalves() turns that into PDF coordinates, which is where /Rotate bites: on a
+ * page stored sideways, "across" on screen is up-and-down in the file.
+ * ========================================================================= */
+var SP_BASE    = 'vendor/pdfjs/';
+var SP_SAMPLE  = 40;        // pages layered at most — plenty to find a gap, quick on a big file
+var SP_W       = 800;       // working width of the layered picture, in pixels
+var spPdfjs = null, spBytes = null, spDoc = null, spTask = null, spFile = null;
+var spPages = [];           // per page: { w, h } as displayed, rotation applied
+var spLayer = null, spFrac = 0.5, spAuto = 0.5, spView = 0;
+var spPanel  = document.getElementById('sp-panel');
+var spStage  = document.getElementById('sp-stage');
+var spCanvas = document.getElementById('sp-canvas');
+var spLine   = document.getElementById('sp-line');
+var spGrip   = document.getElementById('sp-grip');
+var spPos    = document.getElementById('sp-pos');
+var spBar    = document.getElementById('sp-bar');
+var spStatus = document.getElementById('sp-status');
+var spResult = document.getElementById('sp-result');
+var spGo     = document.getElementById('sp-go');
+var spOrder  = document.getElementById('sp-order');
+var spTall   = document.getElementById('sp-tall');
+var spViewEl = document.getElementById('sp-view');
+
+document.getElementById('sp-warn').innerHTML = FROM_DISK
+  ? '<strong style="color:#ff8b8b;">This page is open straight from a file on disk</strong>, and ' +
+    'browsers will not let a file-on-disk page load the PDF reader it needs. Nothing is wrong with ' +
+    'your PDF. Open this page from the website, or through your local web server address.'
+  : 'The first time, this downloads a small PDF reader (about 2&nbsp;MB) from this site. Your PDF ' +
+    'never goes anywhere — it is read and split on this computer.';
+
+function spSay(html, pct) {
+  spStatus.innerHTML = html;
+  if (pct === null || pct === undefined) { spBar.hidden = true; return; }
+  spBar.hidden = false;
+  spBar.firstElementChild.style.width = Math.max(0, Math.min(100, pct)).toFixed(1) + '%';
+}
+
+async function loadPdfjs() {
+  if (spPdfjs) return spPdfjs;
+  var lib = await import(abs(SP_BASE + 'pdf.min.js'));
+  lib.GlobalWorkerOptions.workerSrc = abs(SP_BASE + 'pdf.worker.min.js');
+  spPdfjs = lib;
+  return lib;
+}
+
+/* A sheet is "two-up" if it is wider than it is tall. The 5% slack stops a square-ish
+   page from being split because of a rounding difference in its box. */
+function spIsWide(p) { return p.w > p.h * 1.05; }
+function spWillSplit(p) { return !spTall.checked || spIsWide(p); }
+
+/* Draw one page to a fresh canvas, `width` pixels wide, on white. */
+async function spRender(doc, pageNo, width) {
+  var page = await doc.getPage(pageNo);
+  var vp1 = page.getViewport({ scale: 1 });
+  var vp = page.getViewport({ scale: width / vp1.width });
+  var c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(vp.width)); c.height = Math.max(1, Math.round(vp.height));
+  var ctx = c.getContext('2d', { willReadFrequently: true });
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+  // intent 'print' is not about printing: it is what stops pdf.js pacing its drawing with
+  // requestAnimationFrame, which a background tab never fires. With 'display', switching tabs
+  // while a long PDF is being layered froze it until the tab came back.
+  await page.render({ canvas: c, canvasContext: ctx, viewport: vp, intent: 'print' }).promise;
+  page.cleanup();
+  return c;
+}
+
+wireDrop(document.getElementById('sp-drop'), document.getElementById('sp-file'), function (list) {
+  var f = (list || [])[0];
+  if (!f) return;
+  spOpen(f).catch(function (e) {
+    if (e && e.stale) return;                          // a newer file took over; say nothing
+    spPanel.hidden = true;
+    spSay('<strong style="color:#ff8b8b;">That did not work —</strong> ' + esc(e.message || e), null);
+  });
+});
+
+/* Dropping a second PDF while the first is still being layered must not let the two share a
+   document — they did, and one would cleanup() a page the other was mid-way through drawing,
+   which hangs pdf.js. Each load takes a ticket; a load that is no longer the newest stops. */
+var spTicket = 0;
+function spStale(t) { if (t !== spTicket) throw { stale: true }; }
+
+async function spOpen(f) {
+  var ticket = ++spTicket;
+  spResult.innerHTML = '';
+  if (!/pdf$/i.test(f.type) && ext(f.name) !== 'pdf') {
+    throw new Error('that is not a PDF. This tool only splits PDF files.');
+  }
+  if (FROM_DISK) { spSay(document.getElementById('sp-warn').innerHTML, null); return; }
+  spSay('Opening the PDF reader…', 2);
+  var lib;
+  try { lib = await loadPdfjs(); }
+  catch (e) { throw new Error('the PDF reader could not be loaded. Check your internet connection and try again.'); }
+
+  spSay('Reading ' + esc(f.name) + '…', 5);
+  spGo.disabled = true;
+  var bytes = new Uint8Array(await f.arrayBuffer());
+  spStale(ticket);
+  // pdf.js takes ownership of the buffer it is given, so it gets a copy; pdf-lib needs the
+  // original later. Keep the loading task: in pdf.js 6 that, not the document, is what has
+  // destroy(), and without it every file opened leaks a worker.
+  var task = lib.getDocument({
+    data: bytes.slice(), isEvalSupported: false,
+    wasmUrl: abs(SP_BASE + 'wasm/'), standardFontDataUrl: abs(SP_BASE + 'standard_fonts/')
+  });
+  var doc;
+  try {
+    doc = await task.promise;
+  } catch (e) {
+    task.destroy();
+    spStale(ticket);
+    throw new Error(/password/i.test(e && e.name + e.message)
+      ? 'this PDF is locked with a password. Open it in a PDF reader, save an unlocked copy, and use that.'
+      : 'this file could not be read as a PDF. It may be damaged, or not really a PDF.');
+  }
+  try {
+    // Sizes first — cheap, no drawing — so we know which sheets are two-up.
+    var pages = [];
+    for (var i = 1; i <= doc.numPages; i++) {
+      var vp = (await doc.getPage(i)).getViewport({ scale: 1 });
+      pages.push({ w: vp.width, h: vp.height });
+      spStale(ticket);
+    }
+    var wide = [];
+    pages.forEach(function (p, i) { if (spIsWide(p)) wide.push(i + 1); });
+
+    // Layer the two-up sheets — or every sheet, if none of them are wider than tall.
+    var pool = wide.length ? wide : pages.map(function (p, i) { return i + 1; });
+    var pick = [];
+    var n = Math.min(SP_SAMPLE, pool.length);
+    for (var k = 0; k < n; k++) pick.push(pool[Math.floor(k * pool.length / n)]);
+    var layer = await spBuildLayer(doc, pages, pick, ticket);
+  } catch (e) {
+    task.destroy();
+    throw e;
+  }
+
+  // This load is the newest and it finished: only now does it replace the last one.
+  if (spTask) spTask.destroy();
+  spTask = task; spDoc = doc; spBytes = bytes; spFile = f; spPages = pages; spLayer = layer;
+  document.getElementById('sp-facts').innerHTML = [
+    ['File', f.name], ['Size', human(f.size)], ['Pages', String(doc.numPages)],
+    ['Side by side', wide.length + ' of ' + doc.numPages]
+  ].map(function (x) { return '<div class="fact"><b>' + x[0] + '</b>' + esc(x[1]) + '</div>'; }).join('');
+  spViewEl.max = String(doc.numPages); spViewEl.value = '0'; spView = 0;
+  spAuto = spFindGap(layer);
+  spPanel.hidden = false;
+  spSay(wide.length
+    ? 'Layered ' + pick.length + ' page' + (pick.length === 1 ? '' : 's') + '. The line has been put on the gap it found — check it, and drag it if it is off.'
+    : '<strong style="color:#ffcf66;">None of these pages are wider than they are tall</strong>, so there may be ' +
+      'nothing to split. To split them anyway, untick “Leave pages that are taller than wide whole”.', null);
+  spSet(spAuto);
+  spShow();
+  spGo.disabled = false;
+}
+
+/* Average the brightness of every picked page, stretched to the same box. Text that moves
+   from page to page averages out to grey; the gap, which is in the same place on every
+   sheet, stays white (or stays dark, if it is a fold shadow). Either way it stands out. */
+async function spBuildLayer(doc, pages, pick, ticket) {
+  var aspects = pick.map(function (n) { var p = pages[n - 1]; return p.h / p.w; }).sort();
+  var W = SP_W, H = Math.max(1, Math.round(W * aspects[Math.floor(aspects.length / 2)]));
+  var acc = new Float32Array(W * H);
+  var work = document.createElement('canvas'); work.width = W; work.height = H;
+  var wctx = work.getContext('2d', { willReadFrequently: true });
+  for (var k = 0; k < pick.length; k++) {
+    spSay('Laying the pages on top of each other — ' + (k + 1) + ' of ' + pick.length + '…', 10 + 85 * (k / pick.length));
+    var c = await spRender(doc, pick[k], W);
+    spStale(ticket);
+    wctx.drawImage(c, 0, 0, W, H);
+    var d = wctx.getImageData(0, 0, W, H).data;
+    for (var i = 0, j = 0; i < acc.length; i++, j += 4) acc[i] += 0.299 * d[j] + 0.587 * d[j + 1] + 0.114 * d[j + 2];
+  }
+  // Average, then stretch the contrast so a faint stripe is easy to see.
+  var lo = 255, hi = 0;
+  for (var m = 0; m < acc.length; m++) { acc[m] /= pick.length; if (acc[m] < lo) lo = acc[m]; if (acc[m] > hi) hi = acc[m]; }
+  var span = Math.max(1, hi - lo);
+  var img = wctx.createImageData(W, H);
+  for (var q = 0, r = 0; q < acc.length; q++, r += 4) {
+    var v = ((acc[q] - lo) / span) * 255;
+    img.data[r] = img.data[r + 1] = img.data[r + 2] = v; img.data[r + 3] = 255;
+  }
+  wctx.putImageData(img, 0, 0);
+  return { canvas: work, lum: acc, w: W, h: H, lo: lo, hi: hi };
+}
+
+/* Where is the gap? Look at the middle 40% of the width, column by column, ignoring the
+   top and bottom margins.
+   1. A narrow dark stripe that stands well clear of its surroundings is a fold, a shadow or
+      a printed rule — the one thing that marks the middle exactly — so it wins outright.
+   2. Otherwise, the widest run of clean columns, nearer the middle preferred. "Clean" is
+      judged against the TEXT, not against the darkest column, or one dark speck would make
+      grey text look clean.
+   Ragged-right lines leave white space at the right of the left-hand page, which drags a
+   clean-run guess leftward; that is why 1 comes first. None of this has to be clever: it
+   only has to land near enough that a person can see whether it is right. */
+function spFindGap(layer) {
+  var W = layer.w, H = layer.h, y0 = Math.floor(H * 0.06), y1 = Math.ceil(H * 0.94);
+  var col = new Float32Array(W);
+  for (var x = 0; x < W; x++) {
+    var s = 0;
+    for (var y = y0; y < y1; y++) s += 255 - layer.lum[y * W + x];
+    col[x] = s / (y1 - y0);
+  }
+  var sm = new Float32Array(W);                       // light smoothing against speckle
+  for (var a = 0; a < W; a++) {
+    var t = 0, c = 0;
+    for (var b = Math.max(0, a - 2); b <= Math.min(W - 1, a + 2); b++) { t += col[b]; c++; }
+    sm[a] = t / c;
+  }
+  var from = Math.floor(W * 0.30), to = Math.ceil(W * 0.70);
+  var band = Array.prototype.slice.call(sm, from, to);
+  var sorted = band.slice().sort(function (p, q) { return p - q; });
+  var lo = sorted[0], text = sorted[Math.floor(sorted.length * 0.75)];
+
+  // 1. A fold: the darkest column, if it is narrow and far darker than the text around it.
+  var peak = 0;
+  for (var i = 1; i < band.length; i++) if (band[i] > band[peak]) peak = i;
+  var half = (band[peak] + text) / 2, l = peak, r = peak;
+  while (l > 0 && band[l - 1] > half) l--;
+  while (r < band.length - 1 && band[r + 1] > half) r++;
+  if (band[peak] > text * 2 + 20 && (r - l + 1) < W * 0.06) return (from + (l + r + 1) / 2) / W;
+
+  // 2. The widest clean run.
+  if (text - lo < 2) return 0.5;                       // featureless: nothing to go on
+  var clean = lo + 0.25 * (text - lo);
+  var best = null, bestScore = 0;
+  for (var u = 0; u < band.length; u++) {
+    if (band[u] > clean) continue;
+    var v = u; while (v < band.length && band[v] <= clean) v++;
+    var mid = (from + (u + v) / 2) / W;
+    var score = (v - u) * (1 - Math.abs(mid - 0.5) * 1.5);
+    if (v - u >= W * 0.008 && score > bestScore) { bestScore = score; best = [from + u, from + v]; }
+    u = v;
+  }
+  if (!best) return 0.5;
+
+  // Anywhere inside the clean run is safe, but its middle is not the fold: ragged lines leave
+  // more white on one side. If both halves share a layout, the fold is where the right-hand
+  // text starts minus the left-hand page's own margin. Use that when it lands inside the run;
+  // when it does not (mirrored margins, a dark border round the sheet), fall back to the middle.
+  var left = Math.floor(W * 0.02);
+  while (left < from && sm[left] <= clean) left++;
+  var fold = best[1] - left;
+  if (left < from && fold > best[0] && fold < best[1]) return fold / W;
+  return (best[0] + best[1]) / 2 / W;
+}
+
+function spSet(f) {
+  spFrac = Math.max(0.05, Math.min(0.95, f));
+  var pct = spFrac * 100;
+  spLine.style.left = pct + '%';
+  spGrip.style.left = pct + '%';
+  spGrip.setAttribute('aria-valuetext', pct.toFixed(1) + ' percent across');
+  var off = (spFrac - 0.5) * 100;
+  spPos.innerHTML = pct.toFixed(1) + '% across' + '<small>' +
+    (Math.abs(off) < 0.05 ? 'exactly the middle'
+      : Math.abs(off).toFixed(1) + '% ' + (off > 0 ? 'right' : 'left') + ' of the middle') + '</small>';
+}
+function spTags() {
+  var lr = spOrder.value === 'lr';
+  document.getElementById('sp-tagL').textContent = lr ? '1st' : '2nd';
+  document.getElementById('sp-tagR').textContent = lr ? '2nd' : '1st';
+}
+
+/* What the stage shows: the layered average (0), or one real page so a particular sheet
+   can be checked against the line. */
+var spViewJob = 0;
+async function spShow() {
+  var label = document.getElementById('sp-viewlabel');
+  var ctx = spCanvas.getContext('2d');
+  if (!spView) {
+    spCanvas.width = spLayer.w; spCanvas.height = spLayer.h;
+    ctx.drawImage(spLayer.canvas, 0, 0);
+    label.textContent = 'All the side-by-side pages, layered. Slide to check a single page.';
+    return;
+  }
+  var job = ++spViewJob, n = spView;
+  label.textContent = 'Page ' + n + ' of ' + spDoc.numPages + ' — drawing…';
+  var c = await spRender(spDoc, n, SP_W);
+  if (job !== spViewJob) return;                      // the slider has moved on
+  spCanvas.width = c.width; spCanvas.height = c.height;
+  ctx.drawImage(c, 0, 0);
+  label.textContent = 'Page ' + n + ' of ' + spDoc.numPages +
+    (spWillSplit(spPages[n - 1]) ? '' : ' — taller than wide, so it will be left whole');
+}
+
+wireScrub(spStage, function () { return spDoc ? 1 : 0; }, function (t) { if (t !== null) spSet(t); });
+spGrip.addEventListener('keydown', function (e) {
+  var step = e.shiftKey ? 0.01 : 0.002;
+  if (e.key === 'ArrowLeft') spSet(spFrac - step);
+  else if (e.key === 'ArrowRight') spSet(spFrac + step);
+  else return;
+  e.preventDefault();
+});
+document.getElementById('sp-auto').addEventListener('click', function () { spSet(spAuto); });
+document.getElementById('sp-mid').addEventListener('click', function () { spSet(0.5); });
+spOrder.addEventListener('change', spTags);
+spTall.addEventListener('change', function () { if (spView) spShow(); });
+spViewEl.addEventListener('input', function () { spView = parseInt(spViewEl.value, 10) || 0; spShow(); });
+spTags();
+
+/* The line's position, as a fraction across the page AS DISPLAYED, turned into two boxes in
+   the page's own coordinates. Returns [left half, right half] as the reader sees them.
+   /Rotate turns the page clockwise for display, so:
+     0    across = x, left to right          180  across = x, right to left
+     90   across = y, bottom to top          270  across = y, top to bottom */
+function spHalves(box, angle, f) {
+  var x = box.x, y = box.y, w = box.width, h = box.height;
+  switch (((angle % 360) + 360) % 360) {
+    case 90:  return [{ x: x, y: y, w: w, h: h * f },             { x: x, y: y + h * f, w: w, h: h * (1 - f) }];
+    case 180: return [{ x: x + w * (1 - f), y: y, w: w * f, h: h }, { x: x, y: y, w: w * (1 - f), h: h }];
+    case 270: return [{ x: x, y: y + h * (1 - f), w: w, h: h * f }, { x: x, y: y, w: w, h: h * (1 - f) }];
+    default:  return [{ x: x, y: y, w: w * f, h: h },             { x: x + w * f, y: y, w: w * (1 - f), h: h }];
+  }
+}
+function spCrop(page, r) {
+  // MediaBox as well as CropBox: some printers and older readers go by the MediaBox alone,
+  // and would print the whole sheet. Trim and bleed follow so nothing points outside it.
+  page.setMediaBox(r.x, r.y, r.w, r.h);
+  page.setCropBox(r.x, r.y, r.w, r.h);
+  page.setTrimBox(r.x, r.y, r.w, r.h);
+  page.setBleedBox(r.x, r.y, r.w, r.h);
+  page.setArtBox(r.x, r.y, r.w, r.h);
+}
+
+spGo.addEventListener('click', function () {
+  spSplit().catch(function (e) {
+    spSay('<strong style="color:#ff8b8b;">That did not work —</strong> ' + esc(e.message || e), null);
+    spGo.disabled = false;
+  });
+});
+
+async function spSplit() {
+  spGo.disabled = true; spResult.innerHTML = '';
+  spSay('Loading the PDF writer…', 5);
+  var PDFLib = await import(abs('vendor/pdf-lib/pdf-lib.esm.min.js'));
+  spSay('Reading the pages…', 15);
+  var src;
+  try {
+    src = await PDFLib.PDFDocument.load(spBytes, { ignoreEncryption: true, updateMetadata: false });
+  } catch (e) {
+    throw new Error('this PDF could not be opened for writing. If it is protected, save an unlocked copy and use that.');
+  }
+  var out = await PDFLib.PDFDocument.create();
+
+  // One copyPages() call for everything, each two-up sheet listed twice. A single call
+  // shares the image between the two copies; separate calls would store it twice.
+  var plan = [], idx = [];
+  spPages.forEach(function (p, i) {
+    var split = spWillSplit(p);
+    plan.push(split);
+    idx.push(i); if (split) idx.push(i);
+  });
+  var copies = await out.copyPages(src, idx);
+
+  var f = spFrac, rl = spOrder.value === 'rl', splitCount = 0, ci = 0;
+  for (var i = 0; i < plan.length; i++) {
+    if (i % 20 === 0) {
+      spSay('Splitting — page ' + (i + 1) + ' of ' + plan.length + '…', 20 + 60 * (i / plan.length));
+      await new Promise(function (r) { setTimeout(r, 0); });       // let the bar paint
+    }
+    if (!plan[i]) { out.addPage(copies[ci++]); continue; }
+    var a = copies[ci++], b = copies[ci++];
+    var halves = spHalves(a.getCropBox(), a.getRotation().angle, f);
+    spCrop(a, halves[0]); spCrop(b, halves[1]);
+    if (rl) { out.addPage(b); out.addPage(a); } else { out.addPage(a); out.addPage(b); }
+    splitCount++;
+  }
+
+  spSay('Saving…', 85);
+  var bytes = await out.save({ useObjectStreams: true });
+  var blob = new Blob([bytes], { type: 'application/pdf' });
+  var url = URL.createObjectURL(blob);
+  var base = spFile.name.replace(/\.[^.]+$/, '');
+  var total = out.getPageCount();
+
+  spSay('Done — <strong>' + plan.length + ' sheets in, ' + total + ' pages out</strong>' +
+    (splitCount < plan.length ? ' (' + (plan.length - splitCount) + ' left whole)' : '') +
+    ', ' + human(blob.size) + '. Nothing was redrawn, so every page is as sharp as the original.', 100);
+  spResult.innerHTML =
+    '<p class="note" style="margin-top:.6rem;"><strong>The first few pages of the new file:</strong></p>' +
+    '<div class="sp-thumbs" id="sp-thumbs"></div>' +
+    '<a class="dl" download="' + esc(base) + '-split.pdf" href="' + url + '">Download the split PDF</a>' +
+    '<p class="note" style="margin-top:.8rem;">Flick through it once before you print it.</p>';
+  spGo.disabled = false;
+
+  // Draw the result back with pdf.js: proof the file opens, and a check that the halves are
+  // the right way round, before anyone sends it to a printer.
+  try {
+    var checkTask = spPdfjs.getDocument({
+      data: bytes.slice(), isEvalSupported: false,
+      wasmUrl: abs(SP_BASE + 'wasm/'), standardFontDataUrl: abs(SP_BASE + 'standard_fonts/')
+    });
+    var check = await checkTask.promise;
+    var box = document.getElementById('sp-thumbs');
+    for (var n = 1; n <= Math.min(4, check.numPages); n++) {
+      var c = await spRender(check, n, 260);
+      var fig = document.createElement('figure');
+      fig.appendChild(c);
+      fig.insertAdjacentHTML('beforeend', '<figcaption>Page ' + n + '</figcaption>');
+      box.appendChild(fig);
+    }
+    checkTask.destroy();
+  } catch (e) { /* the preview is a courtesy; the download is what matters */ }
 }
 
 route();

@@ -314,6 +314,105 @@ test.describe('tools page', () => {
     expect(black).toBe(true);
   });
 
+  /* The PDF splitter builds its fixture in the page with the vendored pdf-lib, for the same
+     reason the video tests build theirs: nothing to commit, and the sheet layout is known
+     exactly. A portrait cover, three two-up sheets with a fold at 53% (deliberately not the
+     middle), and one sheet stored portrait with /Rotate 90 so it DISPLAYS two-up. */
+  async function dropTwoUp(page, name, foldAt) {
+    await page.evaluate(async ({ name, foldAt }) => {
+      const { PDFDocument, StandardFonts, rgb, degrees } = await import('/vendor/pdf-lib/pdf-lib.esm.min.js');
+      const doc = await PDFDocument.create();
+      const font = await doc.embedFont(StandardFonts.Helvetica);
+      doc.addPage([612, 792]).drawText('COVER', { x: 200, y: 400, size: 48, font });
+      const gut = 792 * foldAt;
+      for (let s = 0; s < 3; s++) {
+        const p = doc.addPage([792, 612]);
+        for (const x0 of [0, gut]) {
+          for (let i = 0; i < 20; i++) p.drawText('Lorem ipsum dolor sit amet ' + i, { x: x0 + 40, y: 520 - i * 22, size: 11, font });
+        }
+        p.drawLine({ start: { x: gut, y: 0 }, end: { x: gut, y: 612 }, thickness: 3, color: rgb(0.3, 0.3, 0.3) });
+      }
+      const r = doc.addPage([612, 792]);
+      r.setRotation(degrees(90));
+      const bytes = await doc.save();
+      const dt = new DataTransfer();
+      dt.items.add(new File([bytes], name, { type: 'application/pdf' }));
+      const input = document.getElementById('sp-file');
+      input.files = dt.files;
+      input.dispatchEvent(new Event('change'));
+    }, { name, foldAt });
+  }
+
+  test('splits two-up PDF pages losslessly, at the fold it finds', async ({ page }) => {
+    await page.goto(BASE + '#split');
+    await dropTwoUp(page, 'sheets.pdf', 0.53);
+    await expect(page.locator('#sp-status')).toContainText('Layered', { timeout: 20000 });
+    await expect(page.locator('#sp-facts')).toContainText('4 of 5');
+
+    // The fold is found, not assumed to be the middle.
+    const frac = await page.evaluate(() => window.spFrac);
+    expect(Math.abs(frac - 0.53)).toBeLessThan(0.01);
+
+    await page.locator('#sp-go').click();
+    await expect(page.locator('#sp-status')).toContainText('5 sheets in, 9 pages out', { timeout: 20000 });
+    await expect(page.locator('#sp-result a.dl')).toHaveAttribute('download', 'sheets-split.pdf');
+
+    // Read the boxes back out of what was saved, rather than trusting the status line.
+    const boxes = await page.evaluate(async () => {
+      const { PDFDocument } = await import('/vendor/pdf-lib/pdf-lib.esm.min.js');
+      const bytes = await (await fetch(document.querySelector('#sp-result a.dl').href)).arrayBuffer();
+      const d = await PDFDocument.load(bytes);
+      return d.getPages().map(p => {
+        const c = p.getCropBox(), m = p.getMediaBox();
+        return { x: Math.round(c.x), y: Math.round(c.y), w: Math.round(c.width), h: Math.round(c.height),
+                 mw: Math.round(m.width), rot: p.getRotation().angle };
+      });
+    });
+    const cut = Math.round(792 * frac);
+    expect(boxes[0]).toMatchObject({ w: 612, h: 792 });                  // the cover, left whole
+    expect(boxes[1]).toMatchObject({ x: 0, w: cut, h: 612, mw: cut });   // left half first
+    expect(boxes[2]).toMatchObject({ x: cut, w: 792 - cut, h: 612 });
+    // The rotated sheet: "across" on screen is up the page in the file, so it is cut along y.
+    expect(boxes[7]).toMatchObject({ y: 0, w: 612, h: cut, rot: 90 });
+    expect(boxes[8]).toMatchObject({ y: cut, w: 612, h: 792 - cut, rot: 90 });
+
+    // The check-it-before-you-print preview actually drew.
+    await expect(page.locator('#sp-thumbs canvas')).toHaveCount(4);
+  });
+
+  test('right-half-first puts the halves the other way round', async ({ page }) => {
+    await page.goto(BASE + '#split');
+    await dropTwoUp(page, 'sheets.pdf', 0.5);
+    await expect(page.locator('#sp-status')).toContainText('Layered', { timeout: 20000 });
+    await page.locator('#sp-order').selectOption('rl');
+    await expect(page.locator('#sp-tagL')).toHaveText('2nd');
+    await page.locator('#sp-go').click();
+    await expect(page.locator('#sp-status')).toContainText('pages out', { timeout: 20000 });
+    const xs = await page.evaluate(async () => {
+      const { PDFDocument } = await import('/vendor/pdf-lib/pdf-lib.esm.min.js');
+      const bytes = await (await fetch(document.querySelector('#sp-result a.dl').href)).arrayBuffer();
+      return (await PDFDocument.load(bytes)).getPages().slice(1, 3).map(p => Math.round(p.getCropBox().x));
+    });
+    expect(xs[0]).toBeGreaterThan(0);          // right half first
+    expect(xs[1]).toBe(0);
+  });
+
+  test('a second PDF dropped mid-load replaces the first instead of hanging', async ({ page }) => {
+    // Two loads used to share one pdf.js document, and one would clean up a page the other was
+    // still drawing, which froze the tool on "1 of N" for good.
+    await page.goto(BASE + '#split');
+    await dropTwoUp(page, 'first.pdf', 0.5);
+    await dropTwoUp(page, 'second.pdf', 0.53);
+    await expect(page.locator('#sp-status')).toContainText('Layered', { timeout: 20000 });
+    await expect(page.locator('#sp-facts')).toContainText('second.pdf');
+  });
+
+  test('a file that is not a PDF is turned away plainly', async ({ page }) => {
+    await page.goto(BASE + '#split');
+    await page.locator('#sp-file').setInputFiles({ name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('hello') });
+    await expect(page.locator('#sp-status')).toContainText('not a PDF');
+  });
+
   test('a deep link opens the tool directly', async ({ page }) => {
     await page.goto(BASE + '#downsize');
     await expect(page.locator('#view-downsize')).toBeVisible();
