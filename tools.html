@@ -19,7 +19,7 @@
   gtag('config', 'G-NR4CJQJ7D0');
 </script>
 <title>Free Video &amp; Sound Tools for Theatre — Nothing Uploaded</title>
-<meta name="description" content="Check whether a file will play, shrink video for a projector, trim, loop, pull out the audio, or split PDF pages down the middle. Free, runs in your browser — nothing is uploaded.">
+<meta name="description" content="Check whether a file will play, shrink video for a projector, trim, loop, pull out the audio, level a folder of sound files, or clean up and split scanned PDF pages. Free, runs in your browser — nothing is uploaded.">
 <link rel="icon" type="image/png" sizes="32x32" href="images/tcp-icon-32.png">
 <link rel="icon" type="image/png" sizes="128x128" href="images/tcp-icon-128.png">
 <meta property="og:title" content="Free Video &amp; Sound Tools for Theatre">
@@ -107,6 +107,9 @@
     font: inherit; padding: .6rem .8rem; border-radius: 8px;
     background: #2a2a33; color: #fff; border: 1px solid #4a4a55;
   }
+  /* A select is as wide as its longest option; on a phone that pushed the page sideways. */
+  select { max-width: 100%; }
+  .row > div { min-width: 0; max-width: 100%; }
   button.go { background: #28a745; border-color: #28a745; font-weight: 600; cursor: pointer; padding: .65rem 1.4rem; }
   button.go:hover:not(:disabled) { background: #1e7e34; }
   button.go:disabled { opacity: .5; cursor: default; }
@@ -114,6 +117,7 @@
   button.go.alt:hover:not(:disabled) { background: #34343f; border-color: #ffd700; }
 
   /* --- trimmer: the bar under the video is the clip ------------------------ */
+  #n-folder { display: none; }
   #t-video, #p-video { width: 100%; max-height: 46vh; background: #000; border-radius: 10px; margin: 1.2rem 0 .9rem; display: block; }
   .loop-preview { width: 100%; max-height: 42vh; background: #000; border-radius: 10px; display: block; margin-bottom: 1rem; }
   .trimbar {
@@ -187,6 +191,53 @@
   .sp-thumbs figcaption { color: #8d93a0; font-size: .8rem; text-align: center; margin-top: .3rem; }
   input[type=range] { accent-color: #ffd700; width: 100%; }
   .w-stage canvas.w-before { position: absolute; inset: 0; height: 100%; }
+
+  /* --- sound leveller -------------------------------------------------------- */
+  .n-table { width: 100%; border-collapse: collapse; margin-top: 1.2rem; font-size: .9rem; }
+  .n-table th { text-align: left; color: #8d93a0; font-weight: 600; font-size: .74rem; text-transform: uppercase;
+                letter-spacing: .04em; padding: .4rem .5rem; border-bottom: 1px solid #3f3f47; }
+  .n-table td { padding: .55rem .5rem; border-bottom: 1px solid #2f2f37; vertical-align: top; }
+  .n-table td.n-name { overflow-wrap: anywhere; font-weight: 600; }
+  .n-table td.n-num { white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .n-table tr.n-row { cursor: pointer; }
+  .n-table tr.n-row:hover td { background: rgba(255,215,0,.06); }
+  .n-table tr.n-sel td { background: rgba(255,215,0,.12); }
+  .n-plan small { display: block; color: #ffcf66; margin-top: .2rem; line-height: 1.45; }
+  .n-plan small.n-err { color: #ff8b8b; }
+  .n-wrap { overflow-x: auto; }
+  .n-wave { position: relative; margin: .3rem 0 .9rem; }
+  .n-wave canvas { display: block; width: 100%; height: 110px; background: #16161c; border: 1px solid #3f3f47; border-radius: 8px; }
+  .n-wave .playhead { top: 1px; bottom: 1px; display: none; }
+  .n-wave-label { font-size: .8rem; color: #8d93a0; }
+  fieldset.n-extras { border: 1px solid #3f3f47; border-radius: 10px; padding: .8rem 1rem 1rem; margin: 1.1rem 0; }
+  fieldset.n-extras legend { color: #8d93a0; font-size: .8rem; padding: 0 .4rem; }
+  fieldset.n-extras .check { margin-top: .5rem; }
+  .linkbtn { font: inherit; background: none; border: 0; color: #ffd700; cursor: pointer; padding: 0; text-decoration: underline; }
+
+  /* An explainer that opens on hover AND on focus, so a tap or the Tab key reaches it too —
+     a phone or a tablet has no hover at all. */
+  .tip-row { display: flex; align-items: flex-start; gap: .5rem; margin-top: .5rem; }
+  .tip-row .check { margin-top: 0; flex: 1; }
+  .tip { position: relative; flex: none; }
+  .tip > button {
+    width: 1.35rem; height: 1.35rem; border-radius: 50%; border: 1px solid #ffd700; background: transparent;
+    color: #ffd700; font: 700 .8rem/1 inherit; cursor: help; padding: 0;
+  }
+  .tip-body {
+    display: none; position: absolute; z-index: 5; right: 0; top: 1.8rem; width: min(24rem, calc(100vw - 4rem));
+    background: #1d1d24; border: 1px solid #ffd700; border-radius: 10px; padding: .85rem 1rem;
+    box-shadow: 0 6px 24px rgba(0,0,0,.55); font-size: .88rem; line-height: 1.6; color: #d6dae2;
+  }
+  .tip:hover .tip-body, .tip:focus-within .tip-body { display: block; }
+  .tip-body p + p { margin-top: .55rem; }
+  .tip-body dfn { font-style: normal; font-weight: 700; color: #ffd700; }
+
+  details.explain { margin: -.4rem 0 1.2rem; border: 1px solid #3f3f47; border-radius: 10px; padding: .7rem 1rem; background: rgba(0,0,0,.18); }
+  details.explain summary { cursor: pointer; color: #ffd700; font-weight: 600; }
+  details.explain dl { margin-top: .8rem; line-height: 1.6; font-size: .92rem; color: #bfc3cb; }
+  details.explain dt { color: #fff; font-weight: 700; margin-top: .7rem; }
+  details.explain dd { margin: .15rem 0 0; }
+  details.explain p { margin-top: .8rem; line-height: 1.6; font-size: .92rem; color: #bfc3cb; }
 
   .bar { height: 10px; background: #2a2a33; border-radius: 999px; overflow: hidden; margin: .8rem 0 .4rem; }
   .bar > i { display: block; height: 100%; width: 0; background: #00e676; transition: width .2s; }
@@ -269,6 +320,11 @@
         <h2>Clean up scanned PDF pages</h2>
         <p>Grey, yellowed, crooked or black-edged pages? Turn the paper white, straighten the
           pages and clear the borders, and keep the text crisp — kinder to the printer too.</p>
+      </button>
+      <button class="tool-btn" data-tool="level">
+        <h2>Make sounds the same volume</h2>
+        <p>Sound effects from ten different places are never the same level. Drop in a file or a
+          whole folder and bring them all to one loudness, so every cue starts from the same place.</p>
       </button>
     </div>
 
@@ -776,6 +832,126 @@
     <div class="exit-row"><button class="navbtn to-index">&larr; Done — back to all tools</button></div>
   </div>
 
+  <!-- ===================== SOUND LEVELLER ===================== -->
+  <div class="view" id="view-level" hidden>
+    <div class="panel">
+      <h2>Make sounds the same volume</h2>
+      <p class="lede">When your sound effects and music come from different sources and websites,
+        they may play at dramatically different volumes. This turns each file up or down until they
+        all sound equally loud — so the volume you set on each cue is a choice, not a repair.</p>
+
+      <details class="explain" id="n-explain">
+        <summary>Volume, level and loudness — what is the difference?</summary>
+        <dl>
+          <dt>Level</dt>
+          <dd>How strong the sound is in the file itself, measured in <strong>decibels (dB)</strong>.
+            It is what a meter shows. The <em>peak</em> level is the single strongest instant —
+            a file cannot go past the top, called <strong>0&nbsp;dBFS</strong>, without distorting.</dd>
+          <dt>Loudness</dt>
+          <dd>How loud the sound <em>seems</em> to a person. Your ears add it up over time and care
+            more about some pitches than others, so loudness is measured differently, in
+            <strong>LUFS</strong> (Loudness Units relative to Full Scale). The closer to zero, the
+            louder: −14&nbsp;LUFS is loud, −23 is quiet.</dd>
+          <dt>Volume</dt>
+          <dd>The knob: how far you turn the sound up when it plays — the cue's volume, a fader on
+            the desk, the speakers. It changes nothing in the file.</dd>
+        </dl>
+        <p>Why it matters here: a single gunshot and ten seconds of steady rain can reach exactly the
+          same peak <em>level</em>, yet the rain sounds far <em>louder</em>. So this tool matches
+          files by loudness, and changes each file's level to get there. Strictly it makes sounds the
+          same loudness — “volume” is just the word everyone uses.</p>
+      </details>
+      <div class="drop" id="n-drop" tabindex="0" role="button">
+        <strong>Drop sound files or a whole folder here, or click to choose files</strong>
+        <span>Nothing is uploaded. Every file is measured and levelled on this computer.</span>
+      </div>
+      <input type="file" id="n-file" multiple accept="audio/*,.mp3,.wav,.ogg,.oga,.opus,.m4a,.aac,.flac">
+      <input type="file" id="n-folder" webkitdirectory multiple>
+      <p class="note" style="margin-top:.6rem;">Or <button class="linkbtn" id="n-pickfolder">choose a whole folder</button>.</p>
+
+      <div id="n-panel" hidden>
+        <div class="row">
+          <div>
+            <label class="field" for="n-target">Bring everything to</label>
+            <select id="n-target">
+              <option value="-14">Loud — like music streaming</option>
+              <option value="-18" selected>Medium — a good level for a show</option>
+              <option value="-23">Quiet — like TV, the most room for loud moments</option>
+            </select>
+          </div>
+          <div>
+            <label class="field" for="n-uponly">Direction</label>
+            <label class="check"><input type="checkbox" id="n-uponly"> Only turn quiet files up — never turn a file down</label>
+          </div>
+        </div>
+
+        <fieldset class="n-extras">
+          <legend>Changes beyond the volume — off unless you tick them</legend>
+          <div class="tip-row">
+            <label class="check"><input type="checkbox" id="n-limit"> Hold down loud moments (up to 6&nbsp;dB), so a
+              file with one loud bang can still reach the level</label>
+            <div class="tip">
+              <button type="button" aria-label="What holding down loud moments does" aria-describedby="n-limit-tip">?</button>
+              <div class="tip-body" role="tooltip" id="n-limit-tip">
+                <p>This is a <dfn>limiter</dfn>: a ceiling no sound in the file is allowed to go
+                  above. When a moment would cross it, the limiter turns just that moment down for a
+                  split second, then lets go — everything else is left as it was.</p>
+                <p>Its gentler cousin is a <dfn>compressor</dfn>, which turns loud parts down
+                  gradually rather than stopping them at a hard line. A limiter is a compressor with
+                  a brick wall.</p>
+                <p><strong>What this tool does:</strong> say a quiet file has one door slam in it.
+                  To bring the file up to the level, the slam would have to go past the top and
+                  distort. With this ticked, the whole file is turned up and only the slam is held
+                  at the ceiling (−1&nbsp;dB). It will never hold anything down by more than
+                  6&nbsp;dB — beyond that, sounds start to lose their punch, so the file stops short
+                  of the level instead.</p>
+                <p>Off unless you tick it, because it changes the sound itself, not just the level.</p>
+              </div>
+            </div>
+          </div>
+          <label class="check"><input type="checkbox" id="n-trimstart"> Cut off silence at the start, so the sound
+            begins the moment the cue fires</label>
+          <label class="check"><input type="checkbox" id="n-trimend"> Cut off silence at the end, so an auto-follow
+            fires when the sound actually stops</label>
+        </fieldset>
+
+        <div class="n-wrap"><table class="n-table">
+          <thead><tr><th>File</th><th>Length</th><th>Loudness now</th><th>What will happen</th></tr></thead>
+          <tbody id="n-list"></tbody>
+        </table></div>
+        <p class="note" style="margin-top:.6rem;">A change of 3&nbsp;dB is small; 10&nbsp;dB is roughly twice as
+          loud. Click a file to hear it before and after.</p>
+
+        <div id="n-preview" hidden style="margin-top:1.2rem;">
+          <p class="n-wave-label"><strong id="n-pv-name"></strong></p>
+          <p class="n-wave-label">Before</p>
+          <div class="n-wave"><canvas id="n-wave-a"></canvas><div class="playhead" id="n-head-a"></div></div>
+          <p class="n-wave-label">After</p>
+          <div class="n-wave"><canvas id="n-wave-b"></canvas><div class="playhead" id="n-head-b"></div></div>
+          <div class="markrow">
+            <button class="mark" id="n-play-a">&#9654; Play the original</button>
+            <button class="mark" id="n-stop">Stop</button>
+            <button class="mark" id="n-play-b">&#9654; Play it levelled</button>
+          </div>
+          <p class="note">Turn your speakers down a little first — a quiet file may get a lot louder.</p>
+        </div>
+
+        <div class="row">
+          <button class="go" id="n-go">Save the levelled files</button>
+          <button class="go alt" id="n-zip" hidden>Download them as one zip instead</button>
+        </div>
+        <div class="bar" id="n-bar" hidden><i></i></div>
+        <p class="note" id="n-status"></p>
+        <div id="n-result"></div>
+      </div>
+
+      <p class="note" id="n-warn" style="margin-top:1rem;">Files come back as WAV at the same sample rate as the
+        original, so no quality is lost — an MP3 comes back as a WAV of the same sound. Theatre Cue
+        Player plays WAV everywhere. The originals are never changed.</p>
+    </div>
+    <div class="exit-row"><button class="navbtn to-index">&larr; Done — back to all tools</button></div>
+  </div>
+
   <footer>
     <a href="/">Theatre Cue Player</a> &middot;
     <a href="/privacy">Privacy Policy</a> &middot;
@@ -792,7 +968,9 @@
       PDF pages are drawn by <a href="https://github.com/mozilla/pdf.js" target="_blank" rel="noopener">pdf.js</a>
       (Apache&nbsp;2.0, <a href="vendor/pdfjs/NOTICE.md">notice</a>) and written by
       <a href="https://github.com/Hopding/pdf-lib" target="_blank" rel="noopener">pdf-lib</a>
-      (MIT, <a href="vendor/pdf-lib/NOTICE.md">notice</a>), both served from this site.
+      (MIT, <a href="vendor/pdf-lib/NOTICE.md">notice</a>), both served from this site. A batch of
+      levelled sounds is zipped by <a href="https://github.com/101arrowz/fflate" target="_blank" rel="noopener">fflate</a>
+      (MIT, <a href="vendor/fflate/NOTICE.md">notice</a>).
     </p>
   </footer>
 </div>
@@ -819,7 +997,8 @@ var TOOLS = {
   rip:      'Get the sound out of a video',
   downsize: 'Shrink a video',
   split:    'Split PDF pages down the middle',
-  whiten:   'Clean up scanned PDF pages'
+  whiten:   'Clean up scanned PDF pages',
+  level:    'Make sounds the same volume'
 };
 var BASE_TITLE = 'Tools — Theatre Cue Player';
 
@@ -889,7 +1068,7 @@ function wireDrop(dropEl, inputEl, onFiles) {
   ['dragleave', 'drop'].forEach(function (t) {
     dropEl.addEventListener(t, function (e) { e.preventDefault(); dropEl.classList.remove('over'); });
   });
-  dropEl.addEventListener('drop', function (e) { onFiles(e.dataTransfer.files); });
+  dropEl.addEventListener('drop', function (e) { onFiles(e.dataTransfer.files, e); });
   inputEl.addEventListener('change', function () { onFiles(inputEl.files); });
 }
 
@@ -3079,6 +3258,575 @@ async function wRun() {
   wResult.innerHTML = '<a class="dl" download="' + esc(base) + '-clean.pdf" href="' + url + '">Download the cleaned PDF</a>' +
     '<p class="note" style="margin-top:.8rem;">Flick through it once before you print it, and keep the original.</p>';
   wGo.disabled = false;
+}
+
+/* ===========================================================================
+ * TOOL — make sounds the same volume
+ *
+ * Loudness, not peak. Peak normalising turns a file up until its loudest sample
+ * touches the top, which does nothing for a quiet effect with one loud bang in it.
+ * This measures how loud each file SOUNDS (ITU-R BS.1770 / EBU R128, the broadcast
+ * standard: K-weighting, 400 ms blocks, gated) and turns it up or down to a target.
+ *
+ * BY DEFAULT ONLY THE LEVEL CHANGES (decided 2026-10-05). That has consequences:
+ *   - No clipping, ever. If reaching the target would push the loudest moment past
+ *     -1 dBFS, the file is turned up only as far as is safe and the table says how
+ *     far short it fell and why. Holding loud moments down is a limiter, and the
+ *     limiter is opt-in — capped at 6 dB, so it can never squash a file.
+ *   - No resampling. Browsers decode to the context's own rate, which would quietly
+ *     turn 44.1 kHz into 48 kHz. Each file's real rate is read from its header
+ *     (sniffAudio) and it is decoded at exactly that rate.
+ *   - WAV out: lossless, same rate, same channels, 24-bit stays 24-bit. Dither is
+ *     added only when the samples were actually changed.
+ *   - Silence trimming is opt-in too.
+ *
+ * Decoded audio is NOT kept for the whole batch — fifty files of float samples is
+ * gigabytes. Each file is decoded to measure it, then dropped; decoded again to save.
+ * Only the file being previewed stays in memory.
+ * ========================================================================= */
+var N_CEIL_DB  = -1;              // never louder than this, in dBFS
+var N_LIMIT_DB = 6;               // the most the optional limiter may hold anything down
+var N_SILENT_DB = -50;            // below this counts as silence, for trimming
+var N_EXTS = ['mp3', 'wav', 'ogg', 'oga', 'opus', 'm4a', 'aac', 'flac', 'webm'];
+var nItems = [], nSel = -1, nTicket = 0;
+var nPanel  = document.getElementById('n-panel');
+var nList   = document.getElementById('n-list');
+var nStatus = document.getElementById('n-status');
+var nBar    = document.getElementById('n-bar');
+var nResult = document.getElementById('n-result');
+var nGo     = document.getElementById('n-go');
+var nZip    = document.getElementById('n-zip');
+var nCanFolder = typeof window.showDirectoryPicker === 'function';
+
+function nSay(html, pct) {
+  nStatus.innerHTML = html;
+  if (pct === null || pct === undefined) { nBar.hidden = true; return; }
+  nBar.hidden = false;
+  nBar.firstElementChild.style.width = Math.max(0, Math.min(100, pct)).toFixed(1) + '%';
+}
+function dB(x) { return 20 * Math.log10(x); }
+function fromDB(d) { return Math.pow(10, d / 20); }
+function sign(d) { return (d >= 0 ? '+' : '−') + Math.abs(d).toFixed(1); }
+
+/* --- what is in the file: sample rate (and bit depth, for WAV) from its header ----------- */
+function sniffAudio(b) {
+  var str = function (o, n) { return String.fromCharCode.apply(null, b.subarray(o, o + n)); };
+  var u16le = function (o) { return b[o] | (b[o + 1] << 8); };
+  var u32le = function (o) { return (b[o] | (b[o + 1] << 8) | (b[o + 2] << 16) | (b[o + 3] << 24)) >>> 0; };
+  if (b.length < 12) return null;
+  if (str(0, 4) === 'RIFF' && str(8, 4) === 'WAVE') {
+    for (var o = 12; o + 8 <= b.length;) {
+      var id = str(o, 4), size = u32le(o + 4);
+      if (id === 'fmt ') return { rate: u32le(o + 12), bits: u16le(o + 22), float: u16le(o + 8) === 3 };
+      o += 8 + size + (size & 1);
+    }
+    return null;
+  }
+  if (str(0, 4) === 'fLaC') return { rate: (b[18] << 12) | (b[19] << 4) | (b[20] >> 4), bits: ((b[20] & 1) << 4 | b[21] >> 4) + 1 };
+  if (str(0, 4) === 'OggS') {
+    var lim = Math.min(b.length - 16, 4096);
+    for (var i = 0; i < lim; i++) {
+      if (b[i] === 0x01 && str(i + 1, 6) === 'vorbis') return { rate: u32le(i + 12) };
+      if (str(i, 8) === 'OpusHead') return { rate: 48000 };     // Opus always decodes at 48 kHz
+    }
+    return null;
+  }
+  // MP4 / M4A: the rate sits at a fixed place in the 'mp4a' sample entry (16.16 fixed point).
+  var scan = Math.min(b.length - 32, 4 * 1024 * 1024);
+  if (str(4, 4) === 'ftyp') {
+    for (var k = 0; k < scan; k++) {
+      if (b[k] === 0x6d && str(k, 4) === 'mp4a') return { rate: (b[k + 24] << 8) | b[k + 25] };
+    }
+    return null;
+  }
+  // MP3 (after any ID3 tag) or ADTS AAC: the first frame header.
+  var start = 0;
+  if (str(0, 3) === 'ID3') start = 10 + ((b[6] & 127) << 21 | (b[7] & 127) << 14 | (b[8] & 127) << 7 | (b[9] & 127));
+  for (var j = start; j < Math.min(b.length - 4, start + 65536); j++) {
+    if (b[j] !== 0xff || (b[j + 1] & 0xe0) !== 0xe0) continue;
+    if ((b[j + 1] & 0x06) === 0) {                                    // layer 0 = ADTS AAC
+      var aac = [96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350];
+      var ai = (b[j + 2] >> 2) & 15;
+      if (ai < aac.length) return { rate: aac[ai] };
+      continue;
+    }
+    var ver = (b[j + 1] >> 3) & 3, ri = (b[j + 2] >> 2) & 3;
+    if (ver === 1 || ri === 3) continue;
+    var base = [44100, 48000, 32000][ri];
+    return { rate: ver === 3 ? base : ver === 2 ? base / 2 : base / 4 };
+  }
+  return null;
+}
+
+async function nDecode(file) {
+  var bytes = new Uint8Array(await file.arrayBuffer());
+  var info = sniffAudio(bytes) || {};
+  var rate = info.rate >= 8000 && info.rate <= 384000 ? info.rate : 48000;
+  var ctx = new OfflineAudioContext(1, 1, rate);
+  var buf = await ctx.decodeAudioData(bytes.buffer.slice(0));
+  return { buf: buf, rate: rate, known: !!info.rate, bits: info.float ? 32 : (info.bits || 16) };
+}
+function nChannels(buf) {
+  var out = [];
+  for (var c = 0; c < buf.numberOfChannels; c++) out.push(buf.getChannelData(c));
+  return out;
+}
+
+/* --- measuring ---------------------------------------------------------------------------- */
+/* BS.1770 K-weighting for any sample rate (the libebur128 formulation), then gated loudness. */
+function loudness(chs, rate) {
+  var n = chs[0].length;
+  var K = Math.tan(Math.PI * 1681.974450955533 / rate), Q = 0.7071752369554196;
+  var Vh = Math.pow(10, 3.999843853973347 / 20), Vb = Math.pow(Vh, 0.4996667741545416);
+  var a0 = 1 + K / Q + K * K;
+  var s1 = [(Vh + Vb * K / Q + K * K) / a0, 2 * (K * K - Vh) / a0, (Vh - Vb * K / Q + K * K) / a0,
+            2 * (K * K - 1) / a0, (1 - K / Q + K * K) / a0];
+  K = Math.tan(Math.PI * 38.13547087602444 / rate); Q = 0.5003270373238773;
+  var d2 = 1 + K / Q + K * K;
+  var s2 = [1, -2, 1, 2 * (K * K - 1) / d2, (1 - K / Q + K * K) / d2];
+  var step = Math.round(rate * 0.1), nBlocks = Math.max(1, Math.floor((n - 4 * step) / step) + 1);
+  var sums = new Float64Array(Math.ceil(n / step) + 1);           // energy per 100 ms
+  // Both filters in one pass per channel: the shelf (s1), then the high-pass (s2, b = 1, -2, 1).
+  chs.forEach(function (x) {
+    var x1 = 0, x2 = 0, y1 = 0, y2 = 0, u1 = 0, u2 = 0, w1 = 0, w2 = 0;
+    for (var i = 0; i < n; i++) {
+      var v = x[i];
+      var y = s1[0] * v + s1[1] * x1 + s1[2] * x2 - s1[3] * y1 - s1[4] * y2;
+      x2 = x1; x1 = v; y2 = y1; y1 = y;
+      var w = y - 2 * u1 + u2 - s2[3] * w1 - s2[4] * w2;
+      u2 = u1; u1 = y; w2 = w1; w1 = w;
+      sums[(i / step) | 0] += w * w;
+    }
+  });
+  // 400 ms blocks, 75% overlap: four consecutive 100 ms slices.
+  var blocks = [];
+  if (n < 4 * step) {
+    var t = 0; for (var q = 0; q < sums.length; q++) t += sums[q];
+    blocks.push(t / Math.max(1, n));
+  } else {
+    for (var bI = 0; bI < nBlocks; bI++) blocks.push((sums[bI] + sums[bI + 1] + sums[bI + 2] + sums[bI + 3]) / (4 * step));
+  }
+  var L = function (e) { return -0.691 + 10 * Math.log10(e); };
+  var abs = blocks.filter(function (e) { return e > 0 && L(e) > -70; });
+  if (!abs.length) return -Infinity;
+  var mean = function (a) { return a.reduce(function (p, c) { return p + c; }, 0) / a.length; };
+  var rel = L(mean(abs)) - 10;
+  var gated = abs.filter(function (e) { return L(e) > rel; });
+  return L(mean(gated.length ? gated : abs));
+}
+function peakOf(chs) {
+  var p = 0;
+  chs.forEach(function (x) { for (var i = 0; i < x.length; i++) { var a = x[i] < 0 ? -x[i] : x[i]; if (a > p) p = a; } });
+  return p;
+}
+/* Where the sound starts and stops, in samples: the first and last sample above the silence
+   line, with a little kept either side so nothing is clipped off the attack or the tail. */
+function soundSpan(chs, rate) {
+  var thr = fromDB(N_SILENT_DB), n = chs[0].length, first = n, last = -1;
+  for (var i = 0; i < n && first === n; i++) for (var c = 0; c < chs.length; c++) if (Math.abs(chs[c][i]) > thr) { first = i; break; }
+  for (var j = n - 1; j >= 0 && last < 0; j--) for (var d = 0; d < chs.length; d++) if (Math.abs(chs[d][j]) > thr) { last = j; break; }
+  if (last < 0) return { start: 0, end: n };
+  return { start: Math.max(0, first - Math.round(rate * 0.01)), end: Math.min(n, last + 1 + Math.round(rate * 0.1)) };
+}
+
+/* --- the plan: what will be done to one file, from its measurements and the settings ------ */
+function nOpts() {
+  return {
+    target: parseFloat(document.getElementById('n-target').value),
+    upOnly: document.getElementById('n-uponly').checked,
+    limit:  document.getElementById('n-limit').checked,
+    trimS:  document.getElementById('n-trimstart').checked,
+    trimE:  document.getElementById('n-trimend').checked
+  };
+}
+function nPlan(it, o) {
+  if (!isFinite(it.lufs)) return { gain: 0, limit: 0, short: 0, silent: true };
+  var want = o.target - it.lufs;
+  if (o.upOnly && want < 0) want = 0;
+  var room = N_CEIL_DB - dB(it.peak);
+  var gain = want, limit = 0;
+  if (want > room) {
+    limit = o.limit ? Math.min(want - room, N_LIMIT_DB) : 0;
+    gain = room + limit;
+    // A file already peaking above the ceiling has negative room. That must never turn a file
+    // that wanted to go UP down instead: it is left where it is (or limited, if ticked).
+    if (want > 0 && gain < 0) { gain = 0; limit = 0; }
+  }
+  // Close enough is left alone: a file within a quarter of a decibel comes back bit for bit,
+  // rather than nudged by an amount nobody could hear.
+  if (Math.abs(gain) < 0.25 && limit === 0) gain = 0;
+  return { gain: gain, limit: limit, short: want - gain, want: want };
+}
+function nDescribe(it, o) {
+  if (it.error) return '<span class="n-plan"><small class="n-err">' + esc(it.error) + '</small></span>';
+  if (!it.measured) return '<span class="note">measuring…</span>';
+  var p = nPlan(it, o), out;
+  if (p.silent) return '<span class="n-plan">Nothing to level<small>This file is silent.</small></span>';
+  if (Math.abs(p.gain) < 0.3) out = p.short > 0.3 ? 'Left at the same level' : 'Already there — left at the same level';
+  else out = (p.gain > 0 ? 'Turn up ' : 'Turn down ') + Math.abs(p.gain).toFixed(1) + ' dB';
+  var notes = [];
+  if (p.limit > 0.05) notes.push('Its loudest moments will be held down by up to ' + p.limit.toFixed(1) + ' dB.');
+  if (p.short > 0.3) {
+    notes.push(o.limit
+      ? 'Still ' + p.short.toFixed(1) + ' dB short of the level: it would need more than ' + N_LIMIT_DB +
+        ' dB held down, and that would start to squash it.'
+      : p.short.toFixed(1) + ' dB short of the level, because turning it up further would make its ' +
+        'loudest moment distort. Tick “Hold down loud moments” to get closer.');
+  }
+  if (o.upOnly && p.want === 0 && it.lufs > o.target) notes = ['Already louder than the level — left alone.'];
+  var span = it.span, sec = function (n) { return (n / it.rate).toFixed(1) + ' s'; };
+  if (o.trimS && span.start > it.rate * 0.05) notes.push('Cuts ' + sec(span.start) + ' of silence off the start.');
+  if (o.trimE && it.len - span.end > it.rate * 0.05) notes.push('Cuts ' + sec(it.len - span.end) + ' of silence off the end.');
+  if (!it.known) notes.push('Its sample rate could not be read, so it comes back at 48 kHz.');
+  // After a save, what actually came out — the plan is a prediction, and holding loud moments
+  // down lowers a file's loudness by more than the plan can know in advance.
+  if (isFinite(it.after)) notes.unshift('Saved: now ' + it.after.toFixed(1) + ' LUFS.');
+  return '<span class="n-plan">' + out + notes.map(function (t) { return '<small>' + t + '</small>'; }).join('') + '</span>';
+}
+
+/* --- doing it: one file's samples, levelled ----------------------------------------------- */
+function nApply(chs, rate, it, o) {
+  var a = o.trimS ? it.span.start : 0, b = o.trimE ? it.span.end : chs[0].length;
+  var out = chs.map(function (x) { return x.slice(a, b); });
+  // Trimmed: measure again. The half-silent blocks at the edges counted towards the first
+  // reading, and leaving them in the sums set trimmed files about 0.4 dB too loud.
+  var p = nPlan(a || b < chs[0].length ? { lufs: loudness(out, rate), peak: it.peak } : it, o);
+  var g = fromDB(p.gain);
+  if (g !== 1) out.forEach(function (y) { for (var i = 0; i < y.length; i++) y[i] *= g; });
+  if (p.limit > 0.05) limitPeaks(out, rate, fromDB(N_CEIL_DB));
+  return { chs: out, plan: p, changed: Math.abs(p.gain) > 1e-9 || p.limit > 0.05 };
+}
+
+/* A look-ahead peak limiter, all channels linked so the stereo image does not wander. The gain
+   starts falling 5 ms before a peak and recovers over ~80 ms, so it is a smooth duck, never a
+   clip. Only ever used when the user ticks it. */
+function limitPeaks(chs, rate, ceiling) {
+  var n = chs[0].length, L = Math.max(1, Math.round(rate * 0.005));
+  var req = new Float32Array(n);
+  for (var i = 0; i < n; i++) {
+    var pk = 0;
+    for (var c = 0; c < chs.length; c++) { var v = Math.abs(chs[c][i]); if (v > pk) pk = v; }
+    req[i] = pk > ceiling ? ceiling / pk : 1;
+  }
+  // The lowest gain needed anywhere in the next L samples (a sliding-window minimum).
+  var ahead = new Float32Array(n), dq = new Int32Array(n), h = 0, t = 0;
+  for (var j = n - 1; j >= 0; j--) {
+    while (t > h && req[dq[t - 1]] >= req[j]) t--;
+    dq[t++] = j;
+    while (dq[h] > j + L) h++;
+    ahead[j] = req[dq[h]];
+  }
+  // Fall at once to what is needed, recover slowly, then smooth the fall over L samples. The
+  // smoothing averages the past L values, and every one of them already reached the floor the
+  // coming peak needs, so the peak itself is never let through.
+  var rel = Math.exp(-1 / (rate * 0.08)), env = 1, sum = 0, ring = new Float32Array(L), r = 0;
+  for (var k = 0; k < L; k++) ring[k] = 1;
+  sum = L;
+  for (var m = 0; m < n; m++) {
+    var target = ahead[m];
+    env = target < env ? target : target - (target - env) * rel;
+    sum += env - ring[r]; ring[r] = env; r = (r + 1) % L;
+    var gk = Math.min(sum / L, req[m]);
+    for (var d = 0; d < chs.length; d++) chs[d][m] *= gk;
+  }
+}
+
+/* WAV, interleaved PCM. 16-bit, or 24-bit when the original was 24-bit or more. TPDF dither on
+   16-bit, and only when the samples were actually changed — an untouched 16-bit file comes back
+   bit for bit. */
+function encodeWav(chs, rate, bits, dither) {
+  var nch = chs.length, n = chs[0].length, bps = bits / 8;
+  var buf = new ArrayBuffer(44 + n * nch * bps), v = new DataView(buf), o = 0;
+  var w = function (s) { for (var i = 0; i < s.length; i++) v.setUint8(o++, s.charCodeAt(i)); };
+  w('RIFF'); v.setUint32(o, 36 + n * nch * bps, true); o += 4; w('WAVE');
+  w('fmt '); v.setUint32(o, 16, true); o += 4; v.setUint16(o, 1, true); o += 2; v.setUint16(o, nch, true); o += 2;
+  v.setUint32(o, rate, true); o += 4; v.setUint32(o, rate * nch * bps, true); o += 4;
+  v.setUint16(o, nch * bps, true); o += 2; v.setUint16(o, bits, true); o += 2;
+  w('data'); v.setUint32(o, n * nch * bps, true); o += 4;
+  var full = bits === 24 ? 8388608 : 32768, max = full - 1;
+  for (var i = 0; i < n; i++) for (var c = 0; c < nch; c++) {
+    var s = chs[c][i] * full;
+    if (dither && bits === 16) s += Math.random() - Math.random();
+    s = Math.round(s); if (s > max) s = max; else if (s < -full) s = -full;
+    if (bits === 24) { v.setUint8(o, s & 255); v.setUint8(o + 1, (s >> 8) & 255); v.setUint8(o + 2, (s >> 16) & 255); o += 3; }
+    else { v.setInt16(o, s, true); o += 2; }
+  }
+  return new Uint8Array(buf);
+}
+function nOutBits(it) { return it.bits >= 24 ? 24 : 16; }
+function nOutName(it) { return it.file.name.replace(/\.[^.]+$/, '') + '.wav'; }
+
+/* --- taking files in: several files, a folder chosen, or a folder dropped ----------------- */
+function nIsAudio(f) { return N_EXTS.indexOf(ext(f.name)) >= 0 || /^audio\//.test(f.type); }
+
+/* A dropped folder only shows up through the drop's items, as an entry to walk. */
+function nWalk(entry, out) {
+  return new Promise(function (resolve) {
+    if (entry.isFile) { entry.file(function (f) { out.push(f); resolve(); }, function () { resolve(); }); return; }
+    if (!entry.isDirectory) { resolve(); return; }
+    var reader = entry.createReader(), all = [];
+    (function more() {
+      reader.readEntries(function (batch) {
+        if (!batch.length) { Promise.all(all.map(function (e) { return nWalk(e, out); })).then(resolve); return; }
+        all = all.concat(Array.prototype.slice.call(batch));
+        more();                                         // readEntries hands back 100 at a time
+      }, function () { resolve(); });
+    })();
+  });
+}
+
+wireDrop(document.getElementById('n-drop'), document.getElementById('n-file'), function (list, e) {
+  var items = e && e.dataTransfer && e.dataTransfer.items;
+  var entries = [];
+  if (items) for (var i = 0; i < items.length; i++) {
+    var en = items[i].webkitGetAsEntry && items[i].webkitGetAsEntry();
+    if (en) entries.push(en);
+  }
+  if (entries.some(function (en) { return en.isDirectory; })) {
+    var files = [];
+    Promise.all(entries.map(function (en) { return nWalk(en, files); })).then(function () { nTake(files); });
+  } else {
+    nTake(Array.prototype.slice.call(list || []));
+  }
+});
+var nFolder = document.getElementById('n-folder');
+document.getElementById('n-pickfolder').addEventListener('click', function () { nFolder.click(); });
+nFolder.addEventListener('change', function () { nTake(Array.prototype.slice.call(nFolder.files || [])); });
+
+async function nTake(files) {
+  var ticket = ++nTicket;
+  var audio = files.filter(nIsAudio).sort(function (a, b) { return a.name.localeCompare(b.name, undefined, { numeric: true }); });
+  var skipped = files.length - audio.length;
+  nResult.innerHTML = '';
+  nStop();
+  if (!audio.length) {
+    nPanel.hidden = true;
+    nSay('<strong style="color:#ff8b8b;">No sound files in that.</strong> This tool takes ' +
+      N_EXTS.map(function (x) { return '.' + x; }).join(' ') + '.', null);
+    return;
+  }
+  if (typeof OfflineAudioContext === 'undefined') {
+    nPanel.hidden = true;
+    nSay('<strong style="color:#ff8b8b;">This browser cannot work on sound files</strong> — it has no ' +
+      'audio engine for pages to use. Open this page in Chrome, Edge, Firefox or Safari instead.', null);
+    return;
+  }
+  nItems = audio.map(function (f) { return { file: f, measured: false }; });
+  nSel = -1;
+  document.getElementById('n-preview').hidden = true;
+  nPanel.hidden = false;
+  nGo.disabled = true; nZip.hidden = true;
+  nRender();
+  for (var i = 0; i < nItems.length; i++) {
+    if (ticket !== nTicket) return;
+    nSay('Measuring ' + (i + 1) + ' of ' + nItems.length + '…', (i / nItems.length) * 100);
+    var it = nItems[i];
+    try {
+      var d = await nDecode(it.file), chs = nChannels(d.buf);
+      it.rate = d.rate; it.known = d.known; it.bits = d.bits; it.len = d.buf.length;
+      it.ch = d.buf.numberOfChannels; it.dur = d.buf.duration;
+      it.lufs = loudness(chs, d.rate); it.peak = peakOf(chs); it.span = soundSpan(chs, d.rate);
+      it.measured = true;
+      if (nItems.length === 1) { it.buf = d.buf; }
+    } catch (err) {
+      it.error = 'This file could not be opened. It may be damaged, or a format this browser cannot play.';
+    }
+    nRender();
+  }
+  if (ticket !== nTicket) return;
+  var ok = nItems.filter(function (x) { return x.measured; }).length;
+  nSay('Measured ' + ok + ' file' + (ok === 1 ? '' : 's') + '.' +
+    (skipped ? ' ' + skipped + ' other file' + (skipped === 1 ? ' was' : 's were') + ' not sound, and left out.' : ''), null);
+  nGo.textContent = ok === 1 ? 'Save the levelled file' : (nCanFolder ? 'Save them into a folder…' : 'Download them as one zip');
+  nZip.hidden = !(ok > 1 && nCanFolder);
+  nGo.disabled = !ok;
+  if (nItems.length === 1 && nItems[0].measured) nSelect(0);
+}
+
+function nRender() {
+  var o = nOpts();
+  nList.innerHTML = nItems.map(function (it, i) {
+    return '<tr class="n-row' + (i === nSel ? ' n-sel' : '') + '" data-i="' + i + '">' +
+      '<td class="n-name">' + esc(it.file.name) + '</td>' +
+      '<td class="n-num">' + (it.measured ? clock(it.dur) : '') + '</td>' +
+      '<td class="n-num">' + (it.measured ? (isFinite(it.lufs) ? it.lufs.toFixed(1) + ' LUFS' : 'silent') : '') + '</td>' +
+      '<td>' + nDescribe(it, o) + '</td></tr>';
+  }).join('');
+}
+nList.addEventListener('click', function (e) {
+  var tr = e.target.closest('tr[data-i]');
+  if (tr) nSelect(parseInt(tr.dataset.i, 10));
+});
+['n-target', 'n-uponly', 'n-limit', 'n-trimstart', 'n-trimend'].forEach(function (id) {
+  document.getElementById(id).addEventListener('change', function () {
+    nItems.forEach(function (x) { x.after = undefined; });     // the last save no longer applies
+    nRender();
+    if (nSel >= 0) nDrawPreview();
+  });
+});
+
+/* --- the preview: before and after, on the same scale, and both playable ------------------- */
+var nPv = { orig: null, after: null, offset: 0 };
+async function nSelect(i) {
+  var it = nItems[i];
+  if (!it || !it.measured) return;
+  nSel = i; nRender(); nStop();
+  document.getElementById('n-preview').hidden = false;
+  document.getElementById('n-pv-name').textContent = it.file.name;
+  if (!it.buf) {
+    // Only the file being previewed is kept decoded; the last one is let go.
+    nItems.forEach(function (x) { if (x !== it) x.buf = null; });
+    it.buf = (await nDecode(it.file)).buf;
+  }
+  if (nSel !== i) return;
+  nDrawPreview();
+}
+function nDrawPreview() {
+  var it = nItems[nSel], o = nOpts();
+  var chs = nChannels(it.buf), res = nApply(chs, it.rate, it, o);
+  nPv.orig = it.buf;
+  nPv.after = new AudioBuffer({ numberOfChannels: res.chs.length, length: Math.max(1, res.chs[0].length), sampleRate: it.rate });
+  res.chs.forEach(function (x, c) { nPv.after.copyToChannel(x, c); });
+  nPv.offset = o.trimS ? it.span.start : 0;
+  // Both drawn against the ORIGINAL's timeline, so a trimmed start shows as a gap, not a shift.
+  nWave(document.getElementById('n-wave-a'), chs, 0, it.len);
+  nWave(document.getElementById('n-wave-b'), res.chs, nPv.offset, it.len);
+}
+function nWave(canvas, chs, offset, total) {
+  var W = canvas.clientWidth || 700, H = 110, dpr = window.devicePixelRatio || 1;
+  canvas.width = W * dpr; canvas.height = H * dpr;
+  var ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  // The -1 dBFS ceiling, top and bottom: anything touching it is as loud as a file can be.
+  var ceil = fromDB(N_CEIL_DB) * (H / 2 - 4);
+  ctx.strokeStyle = 'rgba(255,90,90,.45)'; ctx.setLineDash([4, 4]);
+  ctx.beginPath(); ctx.moveTo(0, H / 2 - ceil); ctx.lineTo(W, H / 2 - ceil); ctx.moveTo(0, H / 2 + ceil); ctx.lineTo(W, H / 2 + ceil); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#ffd700';
+  var n = chs[0].length, per = total / W;
+  for (var x = 0; x < W; x++) {
+    var a = Math.floor(x * per) - offset, b = Math.floor((x + 1) * per) - offset;
+    if (b <= 0 || a >= n) continue;
+    a = Math.max(0, a); b = Math.min(n, Math.max(b, a + 1));
+    var lo = 0, hi = 0;
+    for (var c = 0; c < chs.length; c++) {
+      var ch = chs[c];
+      for (var i = a; i < b; i++) { var v = ch[i]; if (v < lo) lo = v; if (v > hi) hi = v; }
+    }
+    var y0 = H / 2 - hi * (H / 2 - 4), y1 = H / 2 - lo * (H / 2 - 4);
+    ctx.fillRect(x, y0, 1, Math.max(1, y1 - y0));
+  }
+}
+
+var nAudio = null, nSrc = null, nRaf = 0;
+function nStop() {
+  if (nSrc) { try { nSrc.stop(); } catch (e) { /* already stopped */ } nSrc = null; }
+  cancelAnimationFrame(nRaf);
+  ['n-head-a', 'n-head-b'].forEach(function (id) { document.getElementById(id).style.display = 'none'; });
+}
+function nPlay(which) {
+  if (!nPv.orig) return;
+  nStop();
+  nAudio = nAudio || new AudioContext();
+  nAudio.resume();
+  var buf = which === 'a' ? nPv.orig : nPv.after;
+  var src = nAudio.createBufferSource();
+  src.buffer = buf; src.connect(nAudio.destination);
+  var t0 = nAudio.currentTime, it = nItems[nSel];
+  var head = document.getElementById(which === 'a' ? 'n-head-a' : 'n-head-b');
+  var startAt = which === 'a' ? 0 : nPv.offset / it.rate;
+  head.style.display = 'block';
+  (function tick() {
+    var pos = startAt + (nAudio.currentTime - t0);
+    head.style.left = Math.min(100, (pos / it.dur) * 100) + '%';
+    nRaf = requestAnimationFrame(tick);
+  })();
+  src.onended = function () { if (nSrc === src) nStop(); };
+  src.start();
+  nSrc = src;
+}
+document.getElementById('n-play-a').addEventListener('click', function () { nPlay('a'); });
+document.getElementById('n-play-b').addEventListener('click', function () { nPlay('b'); });
+document.getElementById('n-stop').addEventListener('click', nStop);
+
+/* --- saving ------------------------------------------------------------------------------- */
+/* One file: a plain download. Several: straight into a folder the user picks, where the
+   browser allows it (Chrome, Edge), or one zip. Never over an original: if the name is taken in
+   the folder, "(levelled)" goes on the end. */
+nGo.addEventListener('click', function () {
+  var ok = nItems.filter(function (x) { return x.measured; });
+  var run = ok.length > 1 && nCanFolder
+    ? window.showDirectoryPicker({ mode: 'readwrite' }).then(function (dir) { return nSave(ok, dir); },
+        function (e) { if (e && e.name === 'AbortError') return; throw e; })
+    : nSave(ok, null);
+  Promise.resolve(run).catch(nFail);
+});
+nZip.addEventListener('click', function () {
+  nSave(nItems.filter(function (x) { return x.measured; }), null).catch(nFail);
+});
+function nFail(e) {
+  nSay('<strong style="color:#ff8b8b;">That did not work —</strong> ' + esc((e && e.message) || e), null);
+  nGo.disabled = false;
+}
+
+async function nExists(dir, name) {
+  try { await dir.getFileHandle(name); return true; } catch (e) { return false; }
+}
+
+async function nSave(items, dir) {
+  nGo.disabled = true; nResult.innerHTML = '';
+  var o = nOpts(), zipFiles = {}, used = {}, written = [], started = Date.now();
+  for (var i = 0; i < items.length; i++) {
+    var it = items[i];
+    var left = i ? ((Date.now() - started) / i) * (items.length - i) / 1000 : 0;
+    nSay('Levelling ' + (i + 1) + ' of ' + items.length + (i ? ' — ' + roughly(left) + ' to go.' : '…'), (i / items.length) * 100);
+    var buf = it.buf || (await nDecode(it.file)).buf;
+    var res = nApply(nChannels(buf), it.rate, it, o);
+    it.after = loudness(res.chs, it.rate);
+    var wav = encodeWav(res.chs, it.rate, nOutBits(it), res.changed);
+    var name = nOutName(it), base = name.replace(/\.wav$/, ''), k = 1;
+    while (used[name.toLowerCase()] || (dir && await nExists(dir, name))) {
+      name = base + ' (levelled' + (k > 1 ? ' ' + k : '') + ').wav'; k++;
+    }
+    used[name.toLowerCase()] = true;
+    if (dir) {
+      var fh = await dir.getFileHandle(name, { create: true });
+      var ws = await fh.createWritable();
+      await ws.write(wav); await ws.close();
+    } else if (items.length === 1) {
+      zipFiles = null;
+      var url = URL.createObjectURL(new Blob([wav], { type: 'audio/wav' }));
+      nResult.innerHTML = '<a class="dl" download="' + esc(name) + '" href="' + url + '">Download ' + esc(name) + '</a>';
+    } else {
+      zipFiles[name] = wav;
+    }
+    written.push(name);
+    await new Promise(function (r) { setTimeout(r, 0); });
+  }
+  if (zipFiles && !dir) {
+    nSay('Packing the zip…', 99);
+    await nLoadZip();
+    var zip = window.fflate.zipSync(zipFiles, { level: 0 });      // WAV barely compresses; storing is instant
+    var zurl = URL.createObjectURL(new Blob([zip], { type: 'application/zip' }));
+    nResult.innerHTML = '<a class="dl" download="levelled sounds.zip" href="' + zurl + '">Download the zip — ' +
+      human(zip.length) + '</a>';
+  }
+  nSay('Done — <strong>' + written.length + ' file' + (written.length === 1 ? '' : 's') + '</strong> levelled' +
+    (dir ? ' and saved into the folder you chose' : '') + '. Your originals have not been touched.', 100);
+  if (dir) nResult.innerHTML = '<p class="note">Saved: ' + written.map(esc).join(', ') + '</p>';
+  nRender();
+  nGo.disabled = false;
+}
+function nLoadZip() {
+  if (window.fflate) return Promise.resolve();
+  return new Promise(function (resolve, reject) {
+    var sc = document.createElement('script');
+    sc.src = 'vendor/fflate/fflate.min.js';
+    sc.onload = resolve;
+    sc.onerror = function () { reject(new Error('the zip maker could not be loaded. Check your connection and try again.')); };
+    document.head.appendChild(sc);
+  });
 }
 
 route();

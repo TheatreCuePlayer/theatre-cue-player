@@ -86,6 +86,7 @@ The checker mirrors the extension's own numbers so the two never disagree. If th
 | Make a title card | `#slate` | Canvas + Google Fonts | Act titles, blackouts, intermission, warnings, surtitles. Live preview, PNG at projector resolutions. No engine, instant. See §4.3. |
 | Get the sound out of a video | `#rip` | ffmpeg.wasm | Copies the audio track out untouched (`-vn -c:a copy`), or re-records as WAV/MP3. Reads the stream first so it can name the codec and detect a silent clip. See §4.2. |
 | Shrink a video | `#downsize` | Canvas + `MediaRecorder` | Real-time encode (a 2-min clip takes 2 min) — the UI says so. MP4 when the browser can write it, WebM otherwise. Only works on files the browser can already decode. |
+| Make sounds the same volume | `#level` | Web Audio decode + JS (BS.1770 loudness) + fflate (zip) | One file, a batch, or a folder, to one loudness. **By default only the level changes**; the limiter and silence trimming are opt-in. Lossless WAV out at the original sample rate. Before/after preview. See §4.7. |
 | Clean up scanned PDF pages | `#whiten` | pdf.js (read) + Canvas + pdf-lib (write) | Whiten, straighten, clear black borders, despeckle. Cleans each scan picture **in place**, so the OCR text layer, bookmarks and links survive. Live before/after wipe. See §4.6. |
 | Split PDF pages down the middle | `#split` | pdf.js (draw) + pdf-lib (write) | Lays every two-up sheet on top of the others so the gap shows, finds it, lets you drag the line. Crops rather than redraws — lossless, same file size. See §4.5. |
 
@@ -379,6 +380,67 @@ All distances are millimetres at the working dpi, so the 900 px preview matches 
 - Encrypted (change-protected) PDFs are refused with a plain message: pdf-lib cannot write them
   properly.
 
+### 4.7 Make sounds the same volume
+
+Built 2026-10-05. Brings a file, a batch, or a whole folder (picked, or dropped — a dropped
+folder is walked through `webkitGetAsEntry`) to one loudness, so cue volumes start from the
+same place. No engine to download: the browser decodes, and the rest is arithmetic on samples.
+
+**The rule, from the person who asked for it: by default nothing changes but the level.**
+Everything else follows from that:
+
+- **Loudness, not peak.** Peak normalising does nothing for a quiet effect with one loud bang
+  in it. Loudness is measured to ITU-R BS.1770 / EBU R128 (K-weighting computed for any sample
+  rate, 400 ms blocks, absolute and relative gates). Calibrated in a test: a 1 kHz sine at 0.1 on
+  both channels reads -20.00 LUFS; full scale on one channel reads -3.01, the standard's own
+  reference figure.
+- **Never distorts.** If reaching the target would push the loudest moment past -1 dBFS, the
+  file goes only as far as is safe, and the table says how far short and why.
+  **A file quieter than the target is never turned down** — the first version did exactly that
+  to a file already peaking above -1 dBFS (it had negative room), which is the opposite of what
+  anyone wants. It is now left where it is.
+- **The limiter is opt-in** ("Hold down loud moments"), capped at 6 dB: 5 ms look-ahead,
+  channels linked, ~80 ms recovery, a sliding-window minimum then a trailing average so the peak
+  itself is never let through. Holding a bang down also lowers a click-heavy file's measured
+  loudness, so the plan is a prediction — after saving, each row shows what was actually
+  measured ("Saved: now −27.6 LUFS").
+- **Silence trimming is opt-in**, start and end separately. Below -50 dBFS is silence; 10 ms is
+  kept before the sound and 100 ms after. **Trimmed audio is measured again before the gain is
+  set** — the half-silent edge blocks otherwise left trimmed files 0.4 dB loud.
+- **No resampling.** Browsers decode to their context's rate, which would silently turn 44.1 kHz
+  into 48 kHz. `sniffAudio()` reads the real rate from the header (WAV, FLAC, Ogg Vorbis/Opus,
+  MP4/M4A `mp4a` entry, MP3 and ADTS frame headers) and decodes at exactly that rate. If it
+  cannot tell, it says so in the table and uses 48 kHz.
+- **WAV out**, same channels, 24-bit kept 24-bit. TPDF dither only when samples changed. A file
+  within 0.25 dB of the target is left untouched and comes back **sample for sample** (tested).
+  An MP3 therefore comes back as a WAV of the same sound — the page says so. Writing MP3 would
+  need the FFmpeg engine and a lossy re-encode; not done.
+
+Saving: one file is a plain download. Several go **straight into a folder the user picks**
+(`showDirectoryPicker`, Chrome and Edge), never over an existing name — " (levelled)" is added —
+or into one zip (fflate, stored, not compressed: WAV barely compresses and storing is instant).
+A big batch as a zip is all in memory; the folder route is the one for big batches.
+
+Memory: decoded audio is not kept for the batch — fifty files of float samples would be
+gigabytes. Each file is decoded to measure, dropped, and decoded again to save. Only the file in
+the preview stays decoded.
+
+The preview (any row, or automatically for a single file) draws before and after on **one
+scale** and one timeline — a trimmed start shows as a gap — with the -1 dBFS ceiling dashed, and
+plays either version.
+
+**Teaching the words, on the page.** A fold-out under the lede, "Volume, level and loudness —
+what is the difference?", defines all three (level in dB and dBFS, loudness in LUFS, volume as
+the knob that changes nothing in the file), with the gunshot-versus-rain example, and owns up
+that the tool strictly makes sounds the same *loudness*. The limiter checkbox has a "?" explainer
+that teaches **limiter** and **compressor** and then says exactly what this tool does with it. It
+opens on hover **and on focus**, because a tablet has no hover, and it sits outside the checkbox
+label so opening it cannot tick the box (tested).
+
+**Playwright's WebKit on Windows has no Web Audio at all** (`OfflineAudioContext` undefined;
+real Safari has had it since 14.1). The leveller's tests skip there, and the tool tells a
+browser without it to use another, rather than reporting every file as damaged.
+
 ## 5. Candidate list
 
 Sourced partly from a Gemini brainstorm (2026-08-15). Ordered by how often the problem actually
@@ -447,6 +509,7 @@ is what keeps rule 1 honest. Every library gets a line in the page footer and a 
 | `@ffmpeg/core` (FFmpeg, wasm) | 0.12.10 | **GPL-2.0-or-later** | `vendor/ffmpeg/NOTICE.md` |
 | `pdfjs-dist` (legacy build) | 6.4.299 | Apache-2.0 | `vendor/pdfjs/NOTICE.md` |
 | `pdf-lib` | 1.17.1 | MIT | `vendor/pdf-lib/NOTICE.md` |
+| `fflate` | 0.8.3 | MIT | `vendor/fflate/NOTICE.md` |
 
 Because of the core's licence, **the tools page is offered under GPL-2.0-or-later**. The
 extension and the browser build ship no FFmpeg and are unaffected.
@@ -475,6 +538,10 @@ that the marked-time text had *changed*, which passed while the marks were not r
 all. It now asserts the actual numbers.
 
 ## 8. History
+
+- **2026-10-05** — Sound leveller (§4.7). Six tests: meter calibration, a batch at its own
+  sample rates, the bang case with and without the limiter, trimming, an untouched file coming
+  back sample for sample, and the preview. Selects no longer push a phone-width page sideways.
 
 - **2026-10-05** — Scan cleaner (§4.6), first as "Make PDF pages white", then the same day:
   cleans each scan picture in place so the OCR text layer survives, straightens by turning the

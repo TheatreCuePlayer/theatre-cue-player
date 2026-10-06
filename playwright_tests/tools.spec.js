@@ -451,6 +451,9 @@ test.describe('tools page', () => {
       input.dispatchEvent(new Event('change'));
     }, tilt);
     await expect(page.locator('#w-pagelabel')).toContainText('Page 1 of 1', { timeout: 20000 });
+    // The label reads "Page 1 of 1 — drawing…" while the preview is still being drawn, so wait
+    // for that to go too — measuring the preview before it existed made one test flaky.
+    await expect(page.locator('#w-pagelabel')).not.toContainText('drawing', { timeout: 20000 });
     await expect(page.locator('#w-go')).toBeEnabled();
   }
 
@@ -586,8 +589,163 @@ test.describe('tools page', () => {
     });
     const before = await sum();
     await page.locator('#w-ink').fill('100');
-    await page.waitForTimeout(400);
-    expect(await sum()).toBeLessThan(before);          // darker text, less light overall
+    // Polled, not a fixed wait: under a full parallel run the redraw can take longer than 400 ms.
+    await expect.poll(sum, { timeout: 10000 }).toBeLessThan(before);   // darker text, less light
+  });
+
+  /* The leveller's fixtures are tones written as WAV by the page's own encoder, so their
+     loudness is known exactly: a stereo sine of amplitude A measures 20·log10(A) LUFS. */
+  async function dropSounds(page, specs) {
+    // Playwright's WebKit on Windows is built without Web Audio at all (real Safari has it), so
+    // there is nothing for the leveller to run on there.
+    test.skip(await page.evaluate(() => typeof OfflineAudioContext === 'undefined'),
+      'this WebKit build has no Web Audio');
+    await page.evaluate((specs) => {
+      const files = specs.map(sp => {
+        if (sp.text) return new File([sp.text], sp.name, { type: 'text/plain' });
+        const n = Math.round(sp.rate * (sp.secs + (sp.padS || 0) + (sp.padE || 0)));
+        const a = Math.round(sp.rate * (sp.padS || 0)), b = Math.round(sp.rate * ((sp.padS || 0) + sp.secs));
+        const chs = [0, 1].map(() => {
+          const x = new Float32Array(n);
+          for (let i = a; i < b; i++) x[i] = sp.amp * Math.sin(2 * Math.PI * (sp.freq || 440) * i / sp.rate);
+          if (sp.bang) for (let i = a + sp.rate; i < a + sp.rate + 40; i++) x[i] = i % 2 ? 0.94 : -0.94;
+          return x;
+        });
+        return new File([window.encodeWav(chs, sp.rate, 16, false)], sp.name, { type: 'audio/wav' });
+      });
+      const dt = new DataTransfer();
+      files.forEach(f => dt.items.add(f));
+      const input = document.getElementById('n-file');
+      input.files = dt.files;
+      input.dispatchEvent(new Event('change'));
+    }, specs);
+    await expect(page.locator('#n-status')).toContainText('Measured', { timeout: 20000 });
+  }
+
+  /* Save, then open every file that came out and measure it. Several files come back as a zip
+     (in Chromium the main button would open a folder picker, so the zip button is used). */
+  async function saveAndMeasure(page) {
+    const zipBtn = page.locator('#n-zip');
+    await (await zipBtn.isVisible() ? zipBtn : page.locator('#n-go')).click();
+    await expect(page.locator('#n-status')).toContainText('Done', { timeout: 30000 });
+    return page.evaluate(async () => {
+      const href = document.querySelector('#n-result a.dl').href;
+      const bytes = new Uint8Array(await (await fetch(href)).arrayBuffer());
+      const files = bytes[0] === 0x50 && bytes[1] === 0x4b
+        ? window.fflate.unzipSync(bytes)
+        : { [document.querySelector('#n-result a.dl').download]: bytes };
+      const out = {};
+      for (const [name, b] of Object.entries(files)) {
+        const d = await window.nDecode(new File([b], name)), chs = window.nChannels(d.buf);
+        out[name] = { rate: d.buf.sampleRate, secs: d.buf.duration, lufs: window.loudness(chs, d.rate),
+                      peak: window.dB(window.peakOf(chs)), samples: Array.from(chs[0].slice(0, 20000)) };
+      }
+      return out;
+    });
+  }
+
+  test('the loudness meter reads the broadcast calibration tones correctly', async ({ page }) => {
+    await page.goto(BASE + '#level');
+    const r = await page.evaluate(() => {
+      const sine = (amp, chans) => chans.map(on => {
+        const x = new Float32Array(48000 * 5);
+        if (on) for (let i = 0; i < x.length; i++) x[i] = amp * Math.sin(2 * Math.PI * 997 * i / 48000);
+        return x;
+      });
+      return { stereo: window.loudness(sine(0.1, [1, 1]), 48000), oneSide: window.loudness(sine(1, [1, 0]), 48000) };
+    });
+    expect(Math.abs(r.stereo - -20)).toBeLessThan(0.05);      // -20 dBFS sine on both sides
+    expect(Math.abs(r.oneSide - -3.01)).toBeLessThan(0.05);   // BS.1770's own reference figure
+  });
+
+  test('levels a batch to one loudness, at each file\'s own sample rate', async ({ page }) => {
+    await page.goto(BASE + '#level');
+    await dropSounds(page, [
+      { name: 'quiet.wav', rate: 44100, secs: 3, amp: 0.025, padS: 1, padE: 1 },
+      { name: 'loud.wav', rate: 48000, secs: 3, amp: 0.35 },
+      { name: 'notes.txt', text: 'not a sound' },
+    ]);
+    await expect(page.locator('#n-status')).toContainText('1 other file was not sound');
+    await expect(page.locator('#n-list tr')).toHaveCount(2);
+    const out = await saveAndMeasure(page);
+    expect(Math.abs(out['quiet.wav'].lufs - -18)).toBeLessThan(0.1);
+    expect(Math.abs(out['loud.wav'].lufs - -18)).toBeLessThan(0.1);
+    expect(out['quiet.wav'].rate).toBe(44100);                // not quietly resampled to 48 kHz
+    expect(out['quiet.wav'].secs).toBeCloseTo(5, 2);          // silence left alone unless asked
+    expect(out['quiet.wav'].peak).toBeLessThanOrEqual(-1);
+  });
+
+  test('a quiet file with one loud bang is not distorted, and the limiter is opt-in', async ({ page }) => {
+    await page.goto(BASE + '#level');
+    await dropSounds(page, [{ name: 'bang.wav', rate: 48000, secs: 4, amp: 0.018, bang: true }]);
+    // Off by default: turning it up would push the bang past the top, so it is left alone and
+    // the table says why.
+    await expect(page.locator('#n-limit')).not.toBeChecked();
+    await expect(page.locator('#n-list')).toContainText('Left at the same level');
+    await expect(page.locator('#n-list')).toContainText('Hold down loud moments');
+    await page.locator('#n-limit').check();
+    await expect(page.locator('#n-list')).toContainText(/Turn up \d/);
+    const out = await saveAndMeasure(page);
+    const f = out['bang.wav'];
+    expect(f.peak).toBeLessThanOrEqual(-0.99);                // held at the ceiling, not clipped
+    await expect(page.locator('#n-list')).toContainText('Saved: now');
+  });
+
+  test('silence is trimmed only when asked, and the level is measured after the trim', async ({ page }) => {
+    await page.goto(BASE + '#level');
+    await dropSounds(page, [{ name: 'quiet.wav', rate: 44100, secs: 3, amp: 0.025, padS: 1, padE: 1 }]);
+    await page.locator('#n-trimstart').check();
+    await page.locator('#n-trimend').check();
+    await expect(page.locator('#n-list')).toContainText('of silence off the start');
+    const out = await saveAndMeasure(page);
+    const f = out['quiet.wav'];
+    expect(f.secs).toBeGreaterThan(3.05);                     // 10 ms kept before, 100 ms after
+    expect(f.secs).toBeLessThan(3.15);
+    expect(Math.abs(f.lufs - -18)).toBeLessThan(0.1);
+  });
+
+  test('a file already at the level comes back sample for sample', async ({ page }) => {
+    await page.goto(BASE + '#level');
+    // 1 kHz, where the loudness weighting is neutral: amplitude 0.126 reads -18.0 LUFS.
+    await dropSounds(page, [{ name: 'fine.wav', rate: 48000, secs: 2, amp: 0.126, freq: 997 }]);
+    await expect(page.locator('#n-list')).toContainText('Already there');
+    const before = await page.evaluate(async () => {
+      const d = await window.nDecode(window.nItems[0].file);
+      return Array.from(d.buf.getChannelData(0).slice(0, 20000));
+    });
+    const out = await saveAndMeasure(page);
+    expect(out['fine.wav'].samples).toEqual(before);
+  });
+
+  test('one file opens a before-and-after preview', async ({ page }) => {
+    await page.goto(BASE + '#level');
+    await dropSounds(page, [{ name: 'quiet.wav', rate: 44100, secs: 3, amp: 0.025, padS: 1 }]);
+    await expect(page.locator('#n-preview')).toBeVisible();
+    await expect(page.locator('#n-play-a')).toBeVisible();
+    await expect(page.locator('#n-play-b')).toBeVisible();
+    const ink = (id) => page.evaluate((id) => {
+      const c = document.getElementById(id), d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+      let n = 0; for (let i = 0; i < d.length; i += 4) if (d[i] > 200 && d[i + 1] > 150 && d[i + 2] < 80) n++;
+      return n;
+    }, id);
+    const a = await ink('n-wave-a'), b = await ink('n-wave-b');
+    expect(a).toBeGreaterThan(0);
+    expect(b).toBeGreaterThan(a * 2);                         // turned up 15 dB: a much taller wave
+  });
+
+  test('the limiter explainer opens on focus as well as hover, and never ticks the box', async ({ page }) => {
+    // A tablet has no hover, so the explainer has to open for a tap or the Tab key too. It sits
+    // outside the checkbox's label, so opening it must not switch the limiter on.
+    await page.goto(BASE + '#level');
+    await page.evaluate(() => { document.getElementById('n-panel').hidden = false; });
+    const tip = page.locator('#n-limit-tip');
+    await expect(tip).toBeHidden();
+    await page.locator('.tip > button').focus();
+    await expect(tip).toBeVisible();
+    await expect(tip).toContainText('limiter');
+    await expect(tip).toContainText('compressor');
+    await page.locator('.tip > button').click();
+    await expect(page.locator('#n-limit')).not.toBeChecked();
   });
 
   test('a deep link opens the tool directly', async ({ page }) => {
