@@ -1,8 +1,9 @@
 # Third-party software vendored here
 
 Not written by Theatre Cue Player. Copies of a published release, served from this origin so
-the tools page never sends a PDF anywhere. Used by the "Split pages down the middle" tool to
-draw the pages on screen — it never writes the output file; `vendor/pdf-lib/` does that.
+the tools page never sends a PDF anywhere. Used by the "Split PDF pages down the middle" and
+"Clean up scanned PDF pages" tools to draw and read pages — it never writes the output file; `vendor/pdf-lib/`
+does that.
 
 - **Package:** `pdfjs-dist` **6.4.299**
 - **Licence:** Apache-2.0 — `LICENSE` in this folder

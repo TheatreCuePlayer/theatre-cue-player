@@ -1,8 +1,8 @@
 # Third-party software vendored here
 
 Not written by Theatre Cue Player. A copy of a published release, served from this origin so
-the tools page never sends a PDF anywhere. Used by the "Split pages down the middle" tool to
-write the split file.
+the tools page never sends a PDF anywhere. Used by the "Split PDF pages down the middle" and
+"Clean up scanned PDF pages" tools to write their output files.
 
 - **Package:** `pdf-lib` **1.17.1**
 - **Licence:** MIT — `LICENSE.md` in this folder

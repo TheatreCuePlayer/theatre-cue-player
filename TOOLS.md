@@ -86,6 +86,7 @@ The checker mirrors the extension's own numbers so the two never disagree. If th
 | Make a title card | `#slate` | Canvas + Google Fonts | Act titles, blackouts, intermission, warnings, surtitles. Live preview, PNG at projector resolutions. No engine, instant. See §4.3. |
 | Get the sound out of a video | `#rip` | ffmpeg.wasm | Copies the audio track out untouched (`-vn -c:a copy`), or re-records as WAV/MP3. Reads the stream first so it can name the codec and detect a silent clip. See §4.2. |
 | Shrink a video | `#downsize` | Canvas + `MediaRecorder` | Real-time encode (a 2-min clip takes 2 min) — the UI says so. MP4 when the browser can write it, WebM otherwise. Only works on files the browser can already decode. |
+| Clean up scanned PDF pages | `#whiten` | pdf.js (read) + Canvas + pdf-lib (write) | Whiten, straighten, clear black borders, despeckle. Cleans each scan picture **in place**, so the OCR text layer, bookmarks and links survive. Live before/after wipe. See §4.6. |
 | Split PDF pages down the middle | `#split` | pdf.js (draw) + pdf-lib (write) | Lays every two-up sheet on top of the others so the gap shows, finds it, lets you drag the line. Crops rather than redraws — lossless, same file size. See §4.5. |
 
 ### 4.1 The trimmer, and the FFmpeg decision that came with it
@@ -298,6 +299,86 @@ particular kind of document or say where the PDF came from. Keep it that way (de
   `cleanup()` a page the other was mid-way through drawing, which hung pdf.js for good. Also: in
   pdf.js 6 it is the *loading task*, not the document, that has `destroy()`.
 
+### 4.6 Clean up scanned PDF pages
+
+Built 2026-10-05 as "Make PDF pages white", then reworked the same day to keep the text layer
+and to add straightening and border removal; renamed to match. The hash is still `#whiten`.
+Wording follows §4.5: it may say "scanned or photocopied", but it does not name any particular
+kind of document.
+
+**Straightening and borders are options in this tool, not tools of their own** (decided
+2026-10-05). All three are steps of one scan cleanup, run in the same pass, and separate tools
+would mean downloading and re-dropping the file between them.
+
+#### In place, not redrawn — and why
+
+The first version drew every page and saved it as a new picture, which threw away any OCR text
+layer. That was the simple route, not a necessary one: cleaning moves no pixel, so the existing
+invisible text still lines up. Now:
+
+1. `wFindScans()` walks pdf.js's operator list, tracking the transform through save/restore,
+   `transform` and form XObjects, and keeps every image covering **at least a quarter of the
+   page**. Its drawn width gives the picture's real dpi.
+2. pdf.js hands over that picture's decoded pixels at full resolution (`page.objs`, or
+   `commonObjs` for `g_` ids) **and its PDF object number** (`obj.ref`, e.g. `"4R"`).
+3. The pixels are cleaned and written back with `pdf.context.assign(ref, stream)` — the same
+   object, swapped in the original file loaded by pdf-lib. A picture shared by several pages is
+   cleaned once.
+4. Nothing else is touched: text layer, bookmarks, links and metadata all survive, and the
+   picture keeps its own resolution, so there is no quality setting.
+
+Pages with no qualifying picture (typed pages, inline images, image masks) are **left alone**
+and the status line counts them; the preview says so for the page shown. Inline images and
+masks could be handled later; masks are already black and white, so mostly they need no
+whitening.
+
+Encoding: black and white is packed 1 bit per pixel and deflated with the browser's own
+`CompressionStream` — exactly two values, and small. Greyscale and colour go out as JPEG 0.82.
+
+#### Straightening without moving the text
+
+The skew is measured on a 900 px black-and-white drawing of the page (`wSkewOf`, `findSkew`),
+and the fix is **a rotation of the whole page**: its content is wrapped in
+`q <rotation about the centre> cm … Q` (`wRotatePage`). Picture and text layer turn together.
+Rotating the pixels instead would have left the invisible words where they were. Tested: on a
+page drawn 2° crooked, the output's text runs at +2° in the PDF and the lines measure level.
+
+`findSkew` is a projection profile — at the right angle the rows of text pile into the fewest
+rows, so the sum of squared row counts peaks — coarse in 0.25° steps over ±5°, then 0.025°. Two
+things it got wrong first:
+
+- **Counting all the dark pixels let a picture outvote the text.** A level photo block held a 2°
+  page at 0°. It now counts only the *bottom edges* of ink — the feet of letters line up along
+  each line, and a solid block contributes one row.
+- **Sampling every other row pulled the answer** (2.0° read as 1.7° in Firefox and WebKit): a
+  sloping baseline dropped in and out of the sampled rows unevenly. It now reads every row.
+
+It returns 0 unless the best angle beats level by 5%, so a page of pictures is not tipped at
+random; turns under 0.1° are ignored.
+
+#### The cleaning (`whitenPixels`)
+
+1. **Paper map** — the lightest value per ~1 mm cell, per channel, max-filtered over ~5 mm.
+2. **Picture guard** — under 40% of the page's paper brightness is a photo or solid shape, so
+   the paper colour is used there; 40–60% blends. **It started at 55%, and that was wrong:** a
+   scanner's edge shadow sits around 60% and was kept as "picture" (190 instead of white).
+3. **Divide** each pixel by the map — this one step removes tints and uneven lighting.
+4. **Levels** — "Whiten the paper" moves the white point (252 → 182); "Text darkness" moves the
+   black point and gamma together. Black and white is a hard cut at the middle of the curve.
+5. **Borders** (`removeBorders`) — from every edge of the picture, a dark run that starts within
+   4 px of the edge and stops at the first gap of more than 3 px is cleared, up to 15% in. The
+   cap means a dark band on the page itself is never wiped whole.
+6. **Specks** — blobs under 0.35 mm² (1.5 mm² on the stronger setting) are erased **only if no
+   other ink is within 0.6 mm.** The isolation test, not the size, saves full stops and the
+   dots on i.
+
+All distances are millimetres at the working dpi, so the 900 px preview matches the real thing.
+
+- **Yields with a MessageChannel, not `setTimeout`** — background tabs clamp timers.
+- **Progress quotes time remaining** from the pages already done, as the looper does.
+- Encrypted (change-protected) PDFs are refused with a plain message: pdf-lib cannot write them
+  properly.
+
 ## 5. Candidate list
 
 Sourced partly from a Gemini brainstorm (2026-08-15). Ordered by how often the problem actually
@@ -395,9 +476,13 @@ all. It now asserts the actual numbers.
 
 ## 8. History
 
+- **2026-10-05** — Scan cleaner (§4.6), first as "Make PDF pages white", then the same day:
+  cleans each scan picture in place so the OCR text layer survives, straightens by turning the
+  whole page, clears black borders. Seven tests, including the text layer surviving and turning
+  with a straightened page, and a typed page being left alone. `pdfTask()` added as the shared
+  pdf.js opener.
 - **2026-10-05** — PDF page splitter (§4.5): pdf.js and pdf-lib vendored, both lazily loaded.
   Four Playwright tests, with the fixture built in the page by pdf-lib.
-
 - **2026-08-15** — Looper rewritten (§4.4) to rotate around a user-chosen cut point rather than
   crossfading the tail into the head: the wrap becomes a continuous cut and the dissolve moves
   mid-clip. Verified by decoding frames out of the output.

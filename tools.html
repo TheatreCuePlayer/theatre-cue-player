@@ -186,6 +186,7 @@
   .sp-thumbs canvas { width: 100%; height: auto; display: block; background: #fff; border-radius: 6px; border: 1px solid #3f3f47; }
   .sp-thumbs figcaption { color: #8d93a0; font-size: .8rem; text-align: center; margin-top: .3rem; }
   input[type=range] { accent-color: #ffd700; width: 100%; }
+  .w-stage canvas.w-before { position: absolute; inset: 0; height: 100%; }
 
   .bar { height: 10px; background: #2a2a33; border-radius: 999px; overflow: hidden; margin: .8rem 0 .4rem; }
   .bar > i { display: block; height: 100%; width: 0; background: #00e676; transition: width .2s; }
@@ -263,6 +264,11 @@
         <h2>Split PDF pages down the middle</h2>
         <p>Two pages side by side on every sheet? Cut each one into two separate pages, in order,
           with no loss of sharpness.</p>
+      </button>
+      <button class="tool-btn" data-tool="whiten">
+        <h2>Clean up scanned PDF pages</h2>
+        <p>Grey, yellowed, crooked or black-edged pages? Turn the paper white, straighten the
+          pages and clear the borders, and keep the text crisp — kinder to the printer too.</p>
       </button>
     </div>
 
@@ -680,6 +686,96 @@
     <div class="exit-row"><button class="navbtn to-index">&larr; Done — back to all tools</button></div>
   </div>
 
+  <!-- ===================== PDF PAGE WHITENER ===================== -->
+  <div class="view" id="view-whiten" hidden>
+    <div class="panel">
+      <h2>Clean up scanned PDF pages</h2>
+      <p class="lede">Scanned and photocopied pages come out grey, yellowed, blotchy, crooked or
+        edged in black, and they print as a wash of toner. This turns the paper white, straightens
+        the pages, clears the borders and keeps the writing and pictures readable — every page, in
+        one go.</p>
+      <div class="drop" id="w-drop" tabindex="0" role="button">
+        <strong>Drop a PDF here, or click to choose</strong>
+        <span>Nothing is uploaded. It is cleaned on this computer.</span>
+      </div>
+      <input type="file" id="w-file" accept="application/pdf,.pdf">
+
+      <div id="w-panel" hidden>
+        <div class="results"><div class="card"><div class="card-body" style="padding-top:1.1rem;">
+          <div class="facts" id="w-facts"></div>
+        </div></div></div>
+
+        <!-- Before and after in one frame: the original sits on top, clipped to the left of the
+             divider, so dragging it wipes between the two. -->
+        <div class="sp-stage w-stage" id="w-stage">
+          <canvas id="w-after"></canvas>
+          <canvas id="w-before" class="w-before"></canvas>
+          <span class="sp-tag" style="left:.6rem;">Before</span>
+          <span class="sp-tag" style="right:.6rem;">After</span>
+          <div class="sp-line" id="w-line"></div>
+          <div class="sp-grip" id="w-grip" tabindex="0" role="slider" aria-label="Compare before and after"></div>
+        </div>
+        <p class="note">Drag the gold bar to compare. Changes below show straight away.</p>
+
+        <div class="row">
+          <div style="flex:1; min-width:14rem;">
+            <label class="field" for="w-page">Page shown</label>
+            <input type="range" id="w-page" min="1" max="1" value="1">
+            <span class="note" id="w-pagelabel"></span>
+          </div>
+        </div>
+
+        <div class="row">
+          <div style="flex:1; min-width:12rem;">
+            <label class="field" for="w-white">Whiten the paper</label>
+            <input type="range" id="w-white" min="0" max="100" value="50">
+            <span class="note">Further right clears stains and faint marks showing through from the other side.</span>
+          </div>
+          <div style="flex:1; min-width:12rem;">
+            <label class="field" for="w-ink">Text darkness</label>
+            <input type="range" id="w-ink" min="0" max="100" value="35">
+            <span class="note">Further right makes faint or washed-out writing bolder.</span>
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label class="field" for="w-mode">Colour</label>
+            <select id="w-mode">
+              <option value="gray" selected>Greyscale</option>
+              <option value="color">Keep the colours</option>
+              <option value="bw">Pure black and white</option>
+            </select>
+          </div>
+          <div>
+            <label class="field" for="w-speck">Specks and dust</label>
+            <select id="w-speck">
+              <option value="0">Leave them</option>
+              <option value="1" selected>Remove small specks</option>
+              <option value="2">Remove larger specks too</option>
+            </select>
+          </div>
+          <div>
+            <label class="field" for="w-straight">Crooked pages</label>
+            <label class="check"><input type="checkbox" id="w-straight" checked> Straighten them</label>
+          </div>
+          <div>
+            <label class="field" for="w-borders">Dark edges</label>
+            <label class="check"><input type="checkbox" id="w-borders" checked> Remove black borders</label>
+          </div>
+          <button class="go" id="w-go">Clean every page</button>
+        </div>
+
+        <div class="bar" id="w-bar" hidden><i></i></div>
+        <p class="note" id="w-status"></p>
+        <div id="w-result"></div>
+      </div>
+
+      <p class="note" id="w-warn" style="margin-top:1rem;"></p>
+    </div>
+    <div class="exit-row"><button class="navbtn to-index">&larr; Done — back to all tools</button></div>
+  </div>
+
   <footer>
     <a href="/">Theatre Cue Player</a> &middot;
     <a href="/privacy">Privacy Policy</a> &middot;
@@ -694,7 +790,7 @@
     </p>
     <p style="margin-top:.6rem; line-height:1.7;">
       PDF pages are drawn by <a href="https://github.com/mozilla/pdf.js" target="_blank" rel="noopener">pdf.js</a>
-      (Apache&nbsp;2.0, <a href="vendor/pdfjs/NOTICE.md">notice</a>) and split by
+      (Apache&nbsp;2.0, <a href="vendor/pdfjs/NOTICE.md">notice</a>) and written by
       <a href="https://github.com/Hopding/pdf-lib" target="_blank" rel="noopener">pdf-lib</a>
       (MIT, <a href="vendor/pdf-lib/NOTICE.md">notice</a>), both served from this site.
     </p>
@@ -722,7 +818,8 @@ var TOOLS = {
   slate:    'Make a title card',
   rip:      'Get the sound out of a video',
   downsize: 'Shrink a video',
-  split:    'Split PDF pages down the middle'
+  split:    'Split PDF pages down the middle',
+  whiten:   'Clean up scanned PDF pages'
 };
 var BASE_TITLE = 'Tools — Theatre Cue Player';
 
@@ -2406,6 +2503,582 @@ async function spSplit() {
     }
     checkTask.destroy();
   } catch (e) { /* the preview is a courtesy; the download is what matters */ }
+}
+
+/* ===========================================================================
+ * TOOL — clean up scanned PDF pages
+ *
+ * The scan is cleaned IN PLACE, not redrawn. pdf.js reads each page's operator list,
+ * finds the scanned picture (an image covering at least a quarter of the page), and
+ * hands over its decoded pixels at full resolution, together with its PDF object
+ * number. That picture is cleaned and written back into the ORIGINAL file under the
+ * same object number. Nothing else on the page is touched, so:
+ *   - an OCR text layer stays, and still lines up — cleaning moves no pixel;
+ *   - bookmarks, links and metadata survive;
+ *   - the picture keeps its own resolution — there is no quality setting to get wrong;
+ *   - a picture shared by several pages is cleaned once.
+ * Pages with no scanned picture (typed pages, inline or mask images) are left alone and
+ * the status line says how many.
+ *
+ * Straightening does not rotate pixels either. The skew is measured on a small drawing
+ * of the page, and the page's content is wrapped in `q <rotation> cm … Q` about its
+ * centre. Picture and text turn together, so the text layer stays aligned — rotating
+ * the pixels instead would have left the invisible words behind.
+ *
+ * The cleaning, in order (whitenPixels):
+ *   1. Paper map. The lightest colour in every ~1 mm cell, spread over ~5 mm, is the
+ *      paper as it actually is under the ink — yellow, grey, or shadowed at a fold.
+ *   2. Guard. Where that map is far darker than the page's own paper colour, it is not
+ *      paper, it is a photo or a solid shape bigger than the window — use the paper
+ *      colour there instead, or the picture would be bleached away.
+ *   3. Divide each pixel by the paper map. Paper becomes white whatever colour it was;
+ *      ink keeps its contrast against it. This is the step that removes tints and
+ *      uneven lighting; everything after it is just levels.
+ *   4. Levels: a white point (clears stains and show-through) and a black point plus
+ *      gamma (strengthens faint print). Greyscale, colour, or a hard black/white cut.
+ *   5. Borders: a dark run starting at an edge of the picture is cleared, up to 15% in.
+ *   6. Specks: small dark blobs with NO other ink within ~0.6 mm are erased. The
+ *      isolation test is what saves full stops and the dots on i — they sit close to
+ *      a letter; dust in a margin does not.
+ *
+ * All distances are in millimetres converted at the picture's own dpi, so the preview
+ * (drawn small) and the real thing (full resolution) clean the same way.
+ * ========================================================================= */
+var W_PREVIEW = 900;              // width the preview is drawn and cleaned at, in pixels
+var wTask = null, wDoc = null, wFile = null, wBytes = null, wPages = [], wTicket = 0;
+var wBefore = null;               // ImageData of the page in the preview, untouched
+var wPanel  = document.getElementById('w-panel');
+var wStatus = document.getElementById('w-status');
+var wBar    = document.getElementById('w-bar');
+var wResult = document.getElementById('w-result');
+var wGo     = document.getElementById('w-go');
+var wAfterC = document.getElementById('w-after');
+var wBeforeC = document.getElementById('w-before');
+var wPageEl = document.getElementById('w-page');
+
+document.getElementById('w-warn').innerHTML = FROM_DISK
+  ? '<strong style="color:#ff8b8b;">This page is open straight from a file on disk</strong>, and ' +
+    'browsers will not let a file-on-disk page load the PDF reader it needs. Nothing is wrong with ' +
+    'your PDF. Open this page from the website, or through your local web server address.'
+  : 'The scanned pictures are cleaned at their own resolution and put back into your PDF where ' +
+    'they were, so if you could search or copy the words before, you still can — and bookmarks ' +
+    'and links survive. Keep the original anyway.';
+
+function wSay(html, pct) {
+  wStatus.innerHTML = html;
+  if (pct === null || pct === undefined) { wBar.hidden = true; return; }
+  wBar.hidden = false;
+  wBar.firstElementChild.style.width = Math.max(0, Math.min(100, pct)).toFixed(1) + '%';
+}
+
+function pdfTask(lib, bytes) {
+  return lib.getDocument({
+    data: bytes.slice(), isEvalSupported: false,
+    wasmUrl: abs(SP_BASE + 'wasm/'), standardFontDataUrl: abs(SP_BASE + 'standard_fonts/')
+  });
+}
+
+function wOpts() {
+  return {
+    white: parseInt(document.getElementById('w-white').value, 10) / 100,
+    ink:   parseInt(document.getElementById('w-ink').value, 10) / 100,
+    mode:  document.getElementById('w-mode').value,
+    speck: parseInt(document.getElementById('w-speck').value, 10),
+    borders:  document.getElementById('w-borders').checked,
+    straight: document.getElementById('w-straight').checked
+  };
+}
+
+/* --- the cleaning ---------------------------------------------------------- */
+function whitenPixels(img, dpi, o) {
+  var W = img.width, H = img.height, d = img.data;
+  var mm = dpi / 25.4;
+
+  // 1. Lightest value per ~1 mm cell, per channel.
+  var s = Math.max(2, Math.round(mm));
+  var gw = Math.ceil(W / s), gh = Math.ceil(H / s), n = gw * gh;
+  var ch = [new Float32Array(n), new Float32Array(n), new Float32Array(n)];
+  for (var y = 0; y < H; y++) {
+    var row = ((y / s) | 0) * gw;
+    for (var x = 0, p = y * W * 4; x < W; x++, p += 4) {
+      var g = row + ((x / s) | 0);
+      if (d[p] > ch[0][g]) ch[0][g] = d[p];
+      if (d[p + 1] > ch[1][g]) ch[1][g] = d[p + 1];
+      if (d[p + 2] > ch[2][g]) ch[2][g] = d[p + 2];
+    }
+  }
+  // ...spread over ~5 mm, so a cell sitting inside a thick stroke still finds paper nearby.
+  ch = ch.map(function (a) { return gridFilter(a, gw, gh, 2, Math.max); });
+
+  // The page's own paper colour: the lighter end of the cells, per channel.
+  var paper = ch.map(function (a) {
+    var v = Array.prototype.slice.call(a).sort(function (p, q) { return p - q; });
+    return Math.max(1, v[Math.floor(v.length * 0.9)]);
+  });
+  var paperL = 0.299 * paper[0] + 0.587 * paper[1] + 0.114 * paper[2];
+
+  // 2. Guard: far darker than paper is a picture, not paper.
+  for (var i = 0; i < n; i++) {
+    var L = 0.299 * ch[0][i] + 0.587 * ch[1][i] + 0.114 * ch[2][i];
+    // Under 40% of the paper is a picture; over 60% is paper in shadow. A scanner's edge shadow
+    // sits around 60%, a photo or a solid shape well under 40%.
+    var w = Math.max(0, Math.min(1, (L / paperL - 0.4) / 0.2));
+    for (var c = 0; c < 3; c++) ch[c][i] = Math.max(1, w * ch[c][i] + (1 - w) * paper[c]);
+  }
+  ch = ch.map(function (a) { return gridFilter(gridFilter(a, gw, gh, 2, null), gw, gh, 2, null); });
+
+  // 3 + 4. Divide by the paper map (bilinear between cell centres), then levels.
+  var wp = 252 - 70 * o.white;
+  var bp = 10 + 110 * o.ink, gamma = 1 + 0.9 * o.ink;
+  var lut = new Uint8ClampedArray(256);
+  for (var v = 0; v < 256; v++) {
+    lut[v] = v >= wp ? 255 : v <= bp ? 0 : 255 * Math.pow((v - bp) / (wp - bp), gamma);
+  }
+  var x0 = new Int32Array(W), x1 = new Int32Array(W), tx = new Float32Array(W);
+  for (var xx = 0; xx < W; xx++) {
+    var fx = Math.max(0, Math.min(gw - 1, (xx + 0.5) / s - 0.5));
+    x0[xx] = fx | 0; x1[xx] = Math.min(gw - 1, x0[xx] + 1); tx[xx] = fx - x0[xx];
+  }
+  var bw = o.mode === 'bw', gray = o.mode !== 'color';
+  for (var yy = 0; yy < H; yy++) {
+    var fy = Math.max(0, Math.min(gh - 1, (yy + 0.5) / s - 0.5));
+    var r0 = (fy | 0) * gw, r1 = Math.min(gh - 1, (fy | 0) + 1) * gw, ty = fy - (fy | 0);
+    for (var x2 = 0, q = yy * W * 4; x2 < W; x2++, q += 4) {
+      var a0 = r0 + x0[x2], a1 = r0 + x1[x2], b0 = r1 + x0[x2], b1 = r1 + x1[x2], t = tx[x2];
+      // Written out per channel rather than looped: this runs millions of times a page.
+      var R = ch[0], G = ch[1], B = ch[2], u = 1 - ty;
+      var bR = (R[a0] + (R[a1] - R[a0]) * t) * u + (R[b0] + (R[b1] - R[b0]) * t) * ty;
+      var bG = (G[a0] + (G[a1] - G[a0]) * t) * u + (G[b0] + (G[b1] - G[b0]) * t) * ty;
+      var bB = (B[a0] + (B[a1] - B[a0]) * t) * u + (B[b0] + (B[b1] - B[b0]) * t) * ty;
+      var oR = d[q] * 255 / bR, oG = d[q + 1] * 255 / bG, oB = d[q + 2] * 255 / bB;
+      if (oR > 255) oR = 255; if (oG > 255) oG = 255; if (oB > 255) oB = 255;
+      if (gray) {
+        var lum = lut[(0.299 * oR + 0.587 * oG + 0.114 * oB + 0.5) | 0];
+        if (bw) lum = lum < 128 ? 0 : 255;
+        d[q] = d[q + 1] = d[q + 2] = lum;
+      } else {
+        d[q] = lut[(oR + 0.5) | 0]; d[q + 1] = lut[(oG + 0.5) | 0]; d[q + 2] = lut[(oB + 0.5) | 0];
+      }
+      d[q + 3] = 255;
+    }
+  }
+
+  // 5. Borders, before specks: whatever crumbs of a border survive are then dust.
+  if (o.borders) removeBorders(d, W, H);
+
+  // 6. Specks.
+  if (o.speck) despeckle(d, W, H, (o.speck === 1 ? 0.35 : 1.5) * mm * mm, Math.max(1, Math.round(0.6 * mm)));
+  return img;
+}
+
+/* A separable square filter on the cell grid: fn = Math.max for a max filter, null for a
+   box blur. Radius in cells. */
+function gridFilter(a, gw, gh, r, fn) {
+  var tmp = new Float32Array(a.length), out = new Float32Array(a.length);
+  for (var pass = 0; pass < 2; pass++) {
+    var src = pass ? tmp : a, dst = pass ? out : tmp;
+    for (var y = 0; y < gh; y++) {
+      for (var x = 0; x < gw; x++) {
+        var acc = fn ? -Infinity : 0, cnt = 0;
+        for (var k = -r; k <= r; k++) {
+          var xx = pass ? x : x + k, yy = pass ? y + k : y;
+          if (xx < 0 || yy < 0 || xx >= gw || yy >= gh) continue;
+          var v = src[yy * gw + xx];
+          if (fn) { if (v > acc) acc = v; } else { acc += v; cnt++; }
+        }
+        dst[y * gw + x] = fn ? acc : acc / cnt;
+      }
+    }
+  }
+  return out;
+}
+
+/* Erase dark blobs smaller than maxArea pixels that have no other ink within `gap` pixels.
+   The isolation test is the important half: area alone would take full stops. */
+function despeckle(d, W, H, maxArea, gap) {
+  var N = W * H, label = new Int32Array(N), stack = new Int32Array(N);
+  var dark = function (i) { return d[i * 4] < 128; };
+  var next = 0, comps = [];
+  for (var i = 0; i < N; i++) {
+    if (label[i] || !dark(i)) continue;
+    next++;
+    var sp = 0, area = 0, minx = W, miny = H, maxx = 0, maxy = 0;
+    stack[sp++] = i; label[i] = next;
+    while (sp) {
+      var p = stack[--sp], x = p % W, y = (p / W) | 0;
+      area++;
+      if (x < minx) minx = x; if (x > maxx) maxx = x; if (y < miny) miny = y; if (y > maxy) maxy = y;
+      if (x > 0 && !label[p - 1] && dark(p - 1)) { label[p - 1] = next; stack[sp++] = p - 1; }
+      if (x < W - 1 && !label[p + 1] && dark(p + 1)) { label[p + 1] = next; stack[sp++] = p + 1; }
+      if (y > 0 && !label[p - W] && dark(p - W)) { label[p - W] = next; stack[sp++] = p - W; }
+      if (y < H - 1 && !label[p + W] && dark(p + W)) { label[p + W] = next; stack[sp++] = p + W; }
+    }
+    if (area <= maxArea) comps.push([next, minx, miny, maxx, maxy]);
+  }
+  comps.forEach(function (c) {
+    var x0 = Math.max(0, c[1] - gap), y0 = Math.max(0, c[2] - gap);
+    var x1 = Math.min(W - 1, c[3] + gap), y1 = Math.min(H - 1, c[4] + gap);
+    for (var y = y0; y <= y1; y++) {
+      for (var x = x0; x <= x1; x++) {
+        var l = label[y * W + x];
+        if (l && l !== c[0]) return;                 // something else nearby: it is punctuation
+      }
+    }
+    // Isolated: whiten the blob and its soft edge.
+    for (var yy = Math.max(0, c[2] - 1); yy <= Math.min(H - 1, c[4] + 1); yy++) {
+      for (var xx = Math.max(0, c[1] - 1); xx <= Math.min(W - 1, c[3] + 1); xx++) {
+        var q = (yy * W + xx) * 4;
+        d[q] = d[q + 1] = d[q + 2] = 255;
+      }
+    }
+  });
+}
+
+/* A dark run that starts at an edge (allowing a few light pixels first, for a thin pale
+   rim) and stops at the first real gap is a border: copier lid, scanner bed, the edge of the
+   next page. Each run is cleared up to 15% in, so a full-width dark band on the page itself is
+   never wiped whole. Letters do not start at the very edge of a page, so they are safe. */
+function removeBorders(d, W, H) {
+  var dark = function (i) { var q = i * 4; return d[q] + d[q + 1] + d[q + 2] < 330; };
+  function run(start, step, count) {
+    var gap = 0, seen = false, end = -1;
+    for (var k = 0; k < count; k++) {
+      var i = start + k * step;
+      if (dark(i)) { seen = true; gap = 0; end = k; }
+      else if (!seen ? k > 3 : ++gap > 3) break;
+    }
+    for (var j = 0; j <= end; j++) { var q = (start + j * step) * 4; d[q] = d[q + 1] = d[q + 2] = 255; }
+  }
+  var mx = Math.round(W * 0.15), my = Math.round(H * 0.15);
+  for (var y = 0; y < H; y++) { run(y * W, 1, mx); run(y * W + W - 1, -1, mx); }
+  for (var x = 0; x < W; x++) { run(x, W, my); run((H - 1) * W + x, -W, my); }
+}
+
+/* How far are the lines of text tilted, in degrees? Positive means they run downhill to the
+   right. Projection profile: at the right angle every line of text falls into the same few rows,
+   so the row counts are as uneven as they get — the sum of their squares peaks. Coarse then fine,
+   within ±5°. Expects a black-and-white image. Returns 0 unless the best angle beats level by a
+   clear margin, so a page of pictures is not tipped at random. */
+function findSkew(img) {
+  var W = img.width, H = img.height, d = img.data;
+  // Every row and column, no sampling: skipping rows dropped a sloping baseline in and out
+  // unevenly and pulled the answer (a 2.0 degree page read as 1.7 in two browsers).
+  var step = 1;
+  // Only the bottom edge of the ink counts: the feet of letters line up along each line of
+  // text, while a solid photo or box contributes one row instead of thousands of level pixels
+  // that would outvote the text. (Counting all ink, a dark picture held a 2° page at 0°.)
+  var xs = [], ys = [];
+  for (var y = 0; y < H - 1; y += step) for (var x = 0; x < W; x += step) {
+    var i = (y * W + x) * 4;
+    if (d[i] < 128 && d[i + W * 4] >= 128) { xs.push(x); ys.push(y); }
+  }
+  if (xs.length < 150) return 0;
+  var bins = new Float64Array(Math.ceil((H + 2 * W) / step) + 2);
+  function score(deg) {
+    var t = deg * Math.PI / 180, sn = Math.sin(t), cs = Math.cos(t);
+    bins.fill(0);
+    for (var i = 0; i < xs.length; i++) bins[((ys[i] * cs - xs[i] * sn + W) / step) | 0]++;
+    var sum = 0;
+    for (var b = 0; b < bins.length; b++) sum += bins[b] * bins[b];
+    return sum;
+  }
+  var best = 0, bestS = score(0), level = bestS;
+  for (var a = -5; a <= 5.001; a += 0.25) { var v = score(a); if (v > bestS) { bestS = v; best = a; } }
+  var mid = best;
+  for (var f = mid - 0.25; f <= mid + 0.251; f += 0.025) { var w = score(f); if (w > bestS) { bestS = w; best = f; } }
+  return bestS > level * 1.05 ? Math.round(best * 100) / 100 : 0;
+}
+
+/* The skew of page n, measured on a small black-and-white drawing of it. */
+async function wSkewOf(doc, n) {
+  var c = await spRender(doc, n, W_PREVIEW);
+  var img = c.getContext('2d').getImageData(0, 0, c.width, c.height);
+  whitenPixels(img, c.width / (wPages[n - 1].w / 72), { white: 0.5, ink: 0.35, mode: 'bw', speck: 1, borders: true });
+  return findSkew(img);
+}
+
+/* Which images on this page are scans? Walk the operator list keeping track of the transform,
+   and keep every picture that covers at least a quarter of the page. wPt is how wide it is drawn,
+   in points, which with its pixel width gives its real dpi. */
+function wFindScans(ops, OPS, pageArea) {
+  var ctm = [1, 0, 0, 1, 0, 0], stack = [], found = [];
+  var mul = function (m, n) {
+    return [m[0] * n[0] + m[2] * n[1], m[1] * n[0] + m[3] * n[1], m[0] * n[2] + m[2] * n[3],
+            m[1] * n[2] + m[3] * n[3], m[0] * n[4] + m[2] * n[5] + m[4], m[1] * n[4] + m[3] * n[5] + m[5]];
+  };
+  for (var i = 0; i < ops.fnArray.length; i++) {
+    var fn = ops.fnArray[i], args = ops.argsArray[i];
+    if (fn === OPS.save) stack.push(ctm);
+    else if (fn === OPS.restore) ctm = stack.pop() || ctm;
+    else if (fn === OPS.transform) ctm = mul(ctm, args);
+    else if (fn === OPS.paintFormXObjectBegin) { stack.push(ctm); if (args[0]) ctm = mul(ctm, args[0]); }
+    else if (fn === OPS.paintFormXObjectEnd) ctm = stack.pop() || ctm;
+    else if (fn === OPS.paintImageXObject) {
+      if (Math.abs(ctm[0] * ctm[3] - ctm[1] * ctm[2]) >= pageArea * 0.25) {
+        found.push({ id: args[0], wPt: Math.hypot(ctm[0], ctm[1]) });
+      }
+    }
+  }
+  return found;
+}
+
+/* The decoded picture from pdf.js, onto a canvas at its own size. Usually it is a bitmap; when
+   it is raw data, `kind` says how it is packed (1 = one bit per pixel, 2 = RGB, 3 = RGBA). */
+function wImageCanvas(obj) {
+  var c = document.createElement('canvas');
+  c.width = obj.width; c.height = obj.height;
+  var ctx = c.getContext('2d', { willReadFrequently: true });
+  if (obj.bitmap) { ctx.drawImage(obj.bitmap, 0, 0); return c; }
+  var img = ctx.createImageData(obj.width, obj.height), o = img.data, s = obj.data, n = obj.width * obj.height;
+  if (obj.kind === 3) o.set(s.subarray(0, n * 4));
+  else if (obj.kind === 2) for (var i = 0; i < n; i++) { o[i * 4] = s[i * 3]; o[i * 4 + 1] = s[i * 3 + 1]; o[i * 4 + 2] = s[i * 3 + 2]; o[i * 4 + 3] = 255; }
+  else {
+    var rowBytes = (obj.width + 7) >> 3;
+    for (var y = 0; y < obj.height; y++) for (var x = 0; x < obj.width; x++) {
+      var v = (s[y * rowBytes + (x >> 3)] >> (7 - (x & 7))) & 1 ? 255 : 0, q = (y * obj.width + x) * 4;
+      o[q] = o[q + 1] = o[q + 2] = v; o[q + 3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  return c;
+}
+
+/* The cleaned picture as a PDF image object. Black and white is packed one bit per pixel and
+   deflated (tiny, and exactly two values); anything with shades goes out as JPEG. */
+async function wEncode(ctxPdf, c, mode) {
+  var W = c.width, H = c.height;
+  if (mode === 'bw') {
+    var d = c.getContext('2d').getImageData(0, 0, W, H).data, row = (W + 7) >> 3;
+    var bits = new Uint8Array(row * H);
+    for (var y = 0; y < H; y++) for (var x = 0; x < W; x++) {
+      if (d[(y * W + x) * 4] >= 128) bits[y * row + (x >> 3)] |= 0x80 >> (x & 7);   // 1 = white
+    }
+    var z = new Uint8Array(await new Response(new Blob([bits]).stream()
+      .pipeThrough(new CompressionStream('deflate'))).arrayBuffer());
+    return ctxPdf.stream(z, { Type: 'XObject', Subtype: 'Image', Width: W, Height: H,
+      ColorSpace: 'DeviceGray', BitsPerComponent: 1, Filter: 'FlateDecode' });
+  }
+  var blob = await new Promise(function (r) { c.toBlob(r, 'image/jpeg', 0.82); });
+  return ctxPdf.stream(new Uint8Array(await blob.arrayBuffer()), { Type: 'XObject', Subtype: 'Image',
+    Width: W, Height: H, ColorSpace: 'DeviceRGB', BitsPerComponent: 8, Filter: 'DCTDecode' });
+}
+
+/* Turn the whole page — picture, text layer, everything drawn — by `deg` about its centre, by
+   wrapping its content in q … Q. Positive turns anticlockwise, which levels lines that run
+   downhill by that much. */
+function wRotatePage(PDFLib, pdf, page, deg) {
+  var t = deg * Math.PI / 180, c = Math.cos(t), s = Math.sin(t);
+  var box = page.getCropBox(), cx = box.x + box.width / 2, cy = box.y + box.height / 2;
+  var m = [c, s, -s, c, cx - c * cx + s * cy, cy - s * cx - c * cy];
+  var ctx = pdf.context;
+  var start = ctx.register(ctx.stream('q ' + m.map(function (v) { return v.toFixed(6); }).join(' ') + ' cm\n'));
+  var end = ctx.register(ctx.stream('\nQ\n'));
+  var key = PDFLib.PDFName.of('Contents'), cur = page.node.get(key), arr = cur && ctx.lookup(cur);
+  if (arr instanceof PDFLib.PDFArray) { arr.insert(0, start); arr.push(end); }
+  else page.node.set(key, ctx.obj(cur ? [start, cur, end] : [start, end]));
+}
+
+/* --- loading, and the live preview ----------------------------------------- */
+wireDrop(document.getElementById('w-drop'), document.getElementById('w-file'), function (list) {
+  var f = (list || [])[0];
+  if (!f) return;
+  wOpen(f).catch(function (e) {
+    if (e && e.stale) return;
+    wPanel.hidden = true;
+    wSay('<strong style="color:#ff8b8b;">That did not work —</strong> ' + esc(e.message || e), null);
+  });
+});
+
+async function wOpen(f) {
+  var ticket = ++wTicket;
+  var stale = function () { if (ticket !== wTicket) throw { stale: true }; };
+  wResult.innerHTML = '';
+  if (!/pdf$/i.test(f.type) && ext(f.name) !== 'pdf') throw new Error('that is not a PDF. This tool only cleans PDF files.');
+  if (FROM_DISK) { wSay(document.getElementById('w-warn').innerHTML, null); return; }
+  wSay('Opening the PDF reader…', 5);
+  var lib;
+  try { lib = await loadPdfjs(); }
+  catch (e) { throw new Error('the PDF reader could not be loaded. Check your internet connection and try again.'); }
+  wGo.disabled = true;
+  var bytes = new Uint8Array(await f.arrayBuffer());
+  stale();
+  var task = pdfTask(lib, bytes), doc;
+  try { doc = await task.promise; }
+  catch (e) {
+    task.destroy(); stale();
+    throw new Error(/password/i.test(e && e.name + e.message)
+      ? 'this PDF is locked with a password. Open it in a PDF reader, save an unlocked copy, and use that.'
+      : 'this file could not be read as a PDF. It may be damaged, or not really a PDF.');
+  }
+  var pages = [];
+  try {
+    for (var i = 1; i <= doc.numPages; i++) {
+      var vp = (await doc.getPage(i)).getViewport({ scale: 1 });
+      pages.push({ w: vp.width, h: vp.height });
+      stale();
+    }
+  } catch (e) { task.destroy(); throw e; }
+
+  if (wTask) wTask.destroy();
+  wTask = task; wDoc = doc; wFile = f; wBytes = bytes; wPages = pages;
+  document.getElementById('w-facts').innerHTML = [
+    ['File', f.name], ['Size', human(f.size)], ['Pages', String(doc.numPages)]
+  ].map(function (x) { return '<div class="fact"><b>' + x[0] + '</b>' + esc(x[1]) + '</div>'; }).join('');
+  wPageEl.max = String(doc.numPages); wPageEl.value = '1';
+  wPanel.hidden = false;
+  wSay('', null);
+  wSetWipe(0.5);
+  await wShowPage(1);
+  wGo.disabled = false;
+}
+
+var wShowJob = 0, wIsScan = true, wSkew = 0, wLabel = '';
+async function wShowPage(n) {
+  var job = ++wShowJob;
+  document.getElementById('w-pagelabel').textContent = 'Page ' + n + ' of ' + wDoc.numPages + ' — drawing…';
+  var page = await wDoc.getPage(n);
+  var scans = wFindScans(await page.getOperatorList(), spPdfjs.OPS, wPages[n - 1].w * wPages[n - 1].h);
+  var c = await spRender(wDoc, n, W_PREVIEW);
+  var skew = await wSkewOf(wDoc, n);
+  if (job !== wShowJob) return;
+  wIsScan = scans.length > 0; wSkew = skew;
+  wBefore = c.getContext('2d').getImageData(0, 0, c.width, c.height);
+  wBeforeC.width = wAfterC.width = c.width; wBeforeC.height = wAfterC.height = c.height;
+  wBeforeC.getContext('2d').putImageData(wBefore, 0, 0);
+  wLabel = 'Page ' + n + ' of ' + wDoc.numPages +
+    (wIsScan ? '' : ' — no scanned picture on this page, so it is not whitened');
+  wPreview();
+}
+
+/* Re-clean the preview when a control moves. Coalesced to one run per frame: dragging a slider
+   fires far faster than a page can be cleaned. */
+var wPending = false;
+function wPreview() {
+  if (!wBefore || wPending) return;
+  wPending = true;
+  requestAnimationFrame(function () {
+    wPending = false;
+    var o = wOpts();
+    var copy = new ImageData(new Uint8ClampedArray(wBefore.data), wBefore.width, wBefore.height);
+    var dpi = wBefore.width / (wPages[(parseInt(wPageEl.value, 10) || 1) - 1].w / 72);
+    if (wIsScan) whitenPixels(copy, dpi, o);
+    var ctx = wAfterC.getContext('2d'), turn = o.straight ? wSkew : 0;
+    if (!turn) ctx.putImageData(copy, 0, 0);
+    else {
+      // Same turn the PDF will get: anticlockwise by the skew, about the middle of the page.
+      var tmp = document.createElement('canvas'); tmp.width = copy.width; tmp.height = copy.height;
+      tmp.getContext('2d').putImageData(copy, 0, 0);
+      ctx.save();
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, wAfterC.width, wAfterC.height);
+      ctx.translate(wAfterC.width / 2, wAfterC.height / 2);
+      ctx.rotate(-turn * Math.PI / 180);
+      ctx.drawImage(tmp, -tmp.width / 2, -tmp.height / 2);
+      ctx.restore();
+    }
+    document.getElementById('w-pagelabel').textContent = wLabel +
+      (turn ? ' — straightened by ' + Math.abs(turn).toFixed(1) + '°' : '');
+  });
+}
+
+var wWipe = 0.5;
+function wSetWipe(f) {
+  wWipe = Math.max(0, Math.min(1, f));
+  var pct = wWipe * 100;
+  wBeforeC.style.clipPath = 'inset(0 ' + (100 - pct) + '% 0 0)';
+  document.getElementById('w-line').style.left = pct + '%';
+  document.getElementById('w-grip').style.left = pct + '%';
+  document.getElementById('w-grip').setAttribute('aria-valuetext', Math.round(pct) + ' percent original');
+}
+wireScrub(document.getElementById('w-stage'), function () { return wBefore ? 1 : 0; },
+  function (t) { if (t !== null) wSetWipe(t); });
+document.getElementById('w-grip').addEventListener('keydown', function (e) {
+  if (e.key === 'ArrowLeft') wSetWipe(wWipe - 0.05);
+  else if (e.key === 'ArrowRight') wSetWipe(wWipe + 0.05);
+  else return;
+  e.preventDefault();
+});
+wPageEl.addEventListener('input', function () { wShowPage(parseInt(wPageEl.value, 10) || 1); });
+['w-white', 'w-ink', 'w-mode', 'w-speck', 'w-borders', 'w-straight'].forEach(function (id) {
+  var el = document.getElementById(id);
+  el.addEventListener('input', wPreview);
+  el.addEventListener('change', wPreview);
+});
+
+/* --- cleaning the whole file ------------------------------------------------ */
+/* Yield without a timer: a background tab clamps setTimeout to once a second or worse, and a
+   long PDF would crawl. A MessageChannel round trip is not throttled. */
+function wYield() {
+  return new Promise(function (r) { var mc = new MessageChannel(); mc.port1.onmessage = r; mc.port2.postMessage(0); });
+}
+
+wGo.addEventListener('click', function () {
+  wRun().catch(function (e) {
+    wSay('<strong style="color:#ff8b8b;">That did not work —</strong> ' + esc(e.message || e), null);
+    wGo.disabled = false;
+  });
+});
+
+async function wRun() {
+  wGo.disabled = true; wResult.innerHTML = '';
+  var o = wOpts(), doc = wDoc, pages = wPages, file = wFile, OPS = spPdfjs.OPS;
+  wSay('Loading the PDF writer…', 1);
+  var PDFLib = await import(abs('vendor/pdf-lib/pdf-lib.esm.min.js'));
+  var pdf;
+  try { pdf = await PDFLib.PDFDocument.load(wBytes, { ignoreEncryption: true, updateMetadata: false }); }
+  catch (e) { throw new Error('this PDF could not be opened for writing. It may be damaged.'); }
+  if (pdf.isEncrypted) {
+    throw new Error('this PDF is protected against changes. Open it in a PDF reader, save an ' +
+      'unprotected copy, and use that.');
+  }
+  var started = Date.now(), done = {}, cleaned = 0, plain = 0, turned = 0;
+
+  for (var i = 0; i < pages.length; i++) {
+    var left = i ? ((Date.now() - started) / i) * (pages.length - i) / 1000 : 0;
+    wSay('Cleaning page ' + (i + 1) + ' of ' + pages.length + (i ? ' — ' + roughly(left) + ' to go.' : '…'),
+      (i / pages.length) * 100);
+    var page = await doc.getPage(i + 1);
+    var scans = wFindScans(await page.getOperatorList(), OPS, pages[i].w * pages[i].h);
+    var any = false;
+    for (var k = 0; k < scans.length; k++) {
+      var id = scans[k].id;
+      var obj = await new Promise(function (r) { (id.indexOf('g_') === 0 ? page.commonObjs : page.objs).get(id, r); });
+      var m = obj && obj.ref && /^(\d+)R(\d*)$/.exec(obj.ref);
+      if (!m) continue;
+      any = true;
+      if (done[obj.ref]) continue;                       // the same picture on another page
+      done[obj.ref] = true;
+      var c = wImageCanvas(obj);
+      var cx = c.getContext('2d', { willReadFrequently: true });
+      var img = cx.getImageData(0, 0, c.width, c.height);
+      whitenPixels(img, c.width / (scans[k].wPt / 72), o);
+      cx.putImageData(img, 0, 0);
+      pdf.context.assign(PDFLib.PDFRef.of(+m[1], +(m[2] || 0)), await wEncode(pdf.context, c, o.mode));
+      c.width = c.height = 0;                            // let the big canvas go now, not later
+    }
+    if (any) cleaned++; else plain++;
+    if (o.straight) {
+      var skew = await wSkewOf(doc, i + 1);
+      if (Math.abs(skew) >= 0.1) { wRotatePage(PDFLib, pdf, pdf.getPage(i), skew); turned++; }
+    }
+    page.cleanup();
+    await wYield();
+  }
+
+  wSay('Saving…', 99);
+  var saved = await pdf.save({ useObjectStreams: true });
+  var outBlob = new Blob([saved], { type: 'application/pdf' });
+  var url = URL.createObjectURL(outBlob);
+  var base = file.name.replace(/\.[^.]+$/, '');
+  var took = Math.round((Date.now() - started) / 1000);
+  var pl = function (n, one, many) { return n + ' ' + (n === 1 ? one : many); };
+  wSay('Done in ' + roughly(took) + ' — <strong>' + pl(cleaned, 'page', 'pages') + ' cleaned</strong>' +
+    (o.straight ? ', ' + pl(turned, 'page', 'pages') + ' straightened' : '') + '. ' +
+    (plain ? pl(plain, 'page had', 'pages had') + ' no scanned picture and ' + (plain === 1 ? 'was' : 'were') +
+      ' not whitened. ' : '') +
+    'Any searchable text is still there. ' + human(outBlob.size) + ' (the original was ' + human(file.size) + ').', 100);
+  wResult.innerHTML = '<a class="dl" download="' + esc(base) + '-clean.pdf" href="' + url + '">Download the cleaned PDF</a>' +
+    '<p class="note" style="margin-top:.8rem;">Flick through it once before you print it, and keep the original.</p>';
+  wGo.disabled = false;
 }
 
 route();

@@ -413,6 +413,183 @@ test.describe('tools page', () => {
     await expect(page.locator('#sp-status')).toContainText('not a PDF');
   });
 
+  /* The cleaner's fixture is a grubby scanned page drawn in the page itself: beige paper, a
+     shadow down the left edge, a black border down the right one, grey text ending in full
+     stops, a dark photo with lighter detail in it, three isolated specks of dust and a red
+     underline. Embedded as a JPEG, like a real scan, with an invisible OCR-style text layer
+     over it. `tilt` draws the whole sheet that many degrees crooked (downhill to the right). */
+  async function dropGrubby(page, tilt = 0) {
+    await page.evaluate(async (tilt) => {
+      const W = 1700, H = 2200, c = document.createElement('canvas'); c.width = W; c.height = H;
+      const x = c.getContext('2d');
+      x.fillStyle = '#e6d9b2'; x.fillRect(0, 0, W, H);
+      x.save();
+      x.translate(W / 2, H / 2); x.rotate(tilt * Math.PI / 180); x.translate(-W / 2, -H / 2);
+      x.fillStyle = '#3a3630'; x.font = '34px serif';
+      for (let i = 0; i < 20; i++) x.fillText('The quick brown fox jumps over the lazy dog.', 160, 200 + i * 48);
+      x.restore();
+      const g = x.createLinearGradient(0, 0, 220, 0);
+      g.addColorStop(0, 'rgba(60,50,30,.55)'); g.addColorStop(1, 'rgba(60,50,30,0)');
+      x.fillStyle = g; x.fillRect(0, 0, 220, H);
+      x.fillStyle = '#141414'; x.fillRect(1650, 0, 50, H);                       // black border
+      x.fillStyle = '#4a4a4a'; x.fillRect(300, 1300, 600, 400);
+      x.fillStyle = '#777777'; x.fillRect(400, 1400, 200, 150);
+      x.fillStyle = '#2a2a2a'; [[1300, 1250], [1450, 1900], [200, 2050]].forEach(([a, b]) => x.fillRect(a, b, 4, 4));
+      x.fillStyle = '#c8281e'; x.fillRect(1000, 1300, 400, 12);
+      const jpg = new Uint8Array(await (await new Promise(r => c.toBlob(r, 'image/jpeg', 0.9))).arrayBuffer());
+      const { PDFDocument, StandardFonts, TextRenderingMode } = await import('/vendor/pdf-lib/pdf-lib.esm.min.js');
+      const doc = await PDFDocument.create();
+      const im = await doc.embedJpg(jpg);
+      const font = await doc.embedFont(StandardFonts.Helvetica);
+      const p = doc.addPage([612, 792]);
+      p.drawImage(im, { x: 0, y: 0, width: 612, height: 792 });
+      p.drawText('The quick brown fox', { x: 58, y: 720, size: 12, font, renderMode: TextRenderingMode.Invisible });
+      const dt = new DataTransfer();
+      dt.items.add(new File([await doc.save()], 'grubby.pdf', { type: 'application/pdf' }));
+      const input = document.getElementById('w-file');
+      input.files = dt.files;
+      input.dispatchEvent(new Event('change'));
+    }, tilt);
+    await expect(page.locator('#w-pagelabel')).toContainText('Page 1 of 1', { timeout: 20000 });
+    await expect(page.locator('#w-go')).toBeEnabled();
+  }
+
+  /* Run the clean, then read the result back: the page drawn at 200 dpi (the fixture's own
+     scale, so every probe lands where it was drawn), its text layer, and its skew. */
+  async function cleanAndRead(page, mode, straight = true) {
+    await page.locator('#w-mode').selectOption(mode);
+    await page.locator('#w-straight').setChecked(straight);
+    await page.locator('#w-go').click();
+    await expect(page.locator('#w-status')).toContainText('Done', { timeout: 60000 });
+    await expect(page.locator('#w-result a.dl')).toHaveAttribute('download', 'grubby-clean.pdf');
+    return page.evaluate(async () => {
+      const bytes = new Uint8Array(await (await fetch(document.querySelector('#w-result a.dl').href)).arrayBuffer());
+      const doc = await window.pdfTask(window.spPdfjs, bytes).promise;
+      const pg = await doc.getPage(1);
+      // Read the text with the stream reader, not getTextContent(): that iterates a
+      // ReadableStream with for-await, which WebKit cannot do.
+      const reader = pg.streamTextContent().getReader(), items = [];
+      for (let r = await reader.read(); !r.done; r = await reader.read()) items.push(...r.value.items);
+      const text = items.filter(t => t.str && t.str.trim());
+      const c = await window.spRender(doc, 1, 1700);
+      const d = c.getContext('2d').getImageData(0, 0, c.width, c.height);
+      const at = (x, y) => { const i = (y * d.width + x) * 4; return [d.data[i], d.data[i + 1], d.data[i + 2]]; };
+      const darkest = (x0, y0, x1, y1) => {
+        let m = 255;
+        for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) m = Math.min(m, at(x, y)[0]);
+        return m;
+      };
+      const m = document.createElement('canvas').getContext('2d'); m.font = '34px serif';
+      const stop = 160 + Math.round(m.measureText('The quick brown fox jumps over the lazy dog').width);
+      let between = 0;
+      for (let i = 0; i < d.data.length; i += 4) if (d.data[i] > 8 && d.data[i] < 247) between++;
+      const bw = new ImageData(new Uint8ClampedArray(d.data), d.width, d.height);
+      window.whitenPixels(bw, 200, { white: 0.5, ink: 0.35, mode: 'bw', speck: 1, borders: true });
+      const t = text[0] && text[0].transform;
+      return {
+        paper: at(1400, 600)[0], shadow: at(30, 1000)[0], border: at(1680, 1000)[0],
+        text: darkest(160, 170, 400, 205), stop: darkest(stop, 190, stop + 10, 202),
+        specks: Math.min(...[[1302, 1252], [1452, 1902], [202, 2052]].map(([x, y]) => at(x, y)[0])),
+        photo: at(350, 1350)[0], detail: at(500, 1470)[0], red: at(1200, 1306),
+        greyShare: between / (d.data.length / 4),
+        words: text.map(t => t.str).join(' '),
+        textTurn: t ? Math.atan2(t[1], t[0]) * 180 / Math.PI : null,
+        skewAfter: window.findSkew(bw),
+      };
+    });
+  }
+
+  test('whitens grubby paper and keeps the text, the full stops and the picture', async ({ page }) => {
+    await page.goto(BASE + '#whiten');
+    await dropGrubby(page);
+    const r = await cleanAndRead(page, 'gray');
+    expect(r.paper).toBeGreaterThanOrEqual(250);       // beige paper is now white
+    expect(r.shadow).toBeGreaterThanOrEqual(240);      // and so is the shadowed edge
+    expect(r.border).toBeGreaterThanOrEqual(240);      // and the black border is gone
+    expect(r.text).toBeLessThan(60);                   // grey print is now black
+    expect(r.stop).toBeLessThan(80);                   // full stops are not mistaken for dust
+    expect(r.specks).toBeGreaterThanOrEqual(250);      // isolated specks are
+    // The photo is not bleached to white, and its lighter detail stays lighter.
+    expect(r.photo).toBeLessThan(90);
+    expect(r.detail - r.photo).toBeGreaterThan(40);
+  });
+
+  test('the searchable text layer survives cleaning', async ({ page }) => {
+    await page.goto(BASE + '#whiten');
+    await dropGrubby(page);
+    const r = await cleanAndRead(page, 'gray');
+    expect(r.words).toContain('The quick brown fox');
+    expect(Math.abs(r.textTurn)).toBeLessThan(0.01);   // a straight page is not turned
+    await expect(page.locator('#w-status')).toContainText('Any searchable text is still there');
+  });
+
+  test('a crooked page is straightened, and its text layer turns with it', async ({ page }) => {
+    await page.goto(BASE + '#whiten');
+    await dropGrubby(page, 2);
+    await expect(page.locator('#w-pagelabel')).toContainText(/straightened by (1\.9|2\.0|2\.1)°/);
+    const r = await cleanAndRead(page, 'gray');
+    expect(Math.abs(r.skewAfter)).toBeLessThan(0.3);   // the lines are level now
+    // The page was turned anticlockwise by the skew, and the invisible words went with it —
+    // they still sit over the picture of the words.
+    expect(r.textTurn).toBeGreaterThan(1.7);
+    expect(r.textTurn).toBeLessThan(2.3);
+    expect(r.words).toContain('The quick brown fox');
+    await expect(page.locator('#w-status')).toContainText('1 page straightened');
+  });
+
+  test('keep-the-colours leaves a red mark red', async ({ page }) => {
+    await page.goto(BASE + '#whiten');
+    await dropGrubby(page);
+    const r = await cleanAndRead(page, 'color');
+    expect(r.paper).toBeGreaterThanOrEqual(250);
+    expect(r.red[0]).toBeGreaterThan(150);
+    expect(r.red[1]).toBeLessThan(110);
+  });
+
+  test('black and white really is only black and white', async ({ page }) => {
+    await page.goto(BASE + '#whiten');
+    await dropGrubby(page);
+    const r = await cleanAndRead(page, 'bw');
+    expect(r.greyShare).toBeLessThan(0.01);            // a few edge pixels from drawing it back
+    expect(r.paper).toBe(255);
+    expect(r.text).toBe(0);
+  });
+
+  test('a page with no scanned picture is left alone', async ({ page }) => {
+    await page.goto(BASE + '#whiten');
+    await page.evaluate(async () => {
+      const { PDFDocument, StandardFonts, rgb } = await import('/vendor/pdf-lib/pdf-lib.esm.min.js');
+      const doc = await PDFDocument.create();
+      const font = await doc.embedFont(StandardFonts.Helvetica);
+      const p = doc.addPage([612, 792]);
+      p.drawRectangle({ x: 0, y: 0, width: 612, height: 792, color: rgb(0.9, 0.85, 0.7) });
+      p.drawText('Typed, not scanned', { x: 72, y: 700, size: 18, font });
+      const dt = new DataTransfer();
+      dt.items.add(new File([await doc.save()], 'typed.pdf', { type: 'application/pdf' }));
+      const input = document.getElementById('w-file');
+      input.files = dt.files;
+      input.dispatchEvent(new Event('change'));
+    });
+    await expect(page.locator('#w-pagelabel')).toContainText('no scanned picture', { timeout: 20000 });
+    await page.locator('#w-go').click();
+    await expect(page.locator('#w-status')).toContainText('1 page had no scanned picture', { timeout: 20000 });
+  });
+
+  test('the preview updates when a slider moves', async ({ page }) => {
+    await page.goto(BASE + '#whiten');
+    await dropGrubby(page);
+    const sum = () => page.evaluate(() => {
+      const c = document.getElementById('w-after');
+      const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+      let t = 0; for (let i = 0; i < d.length; i += 4) t += d[i];
+      return t;
+    });
+    const before = await sum();
+    await page.locator('#w-ink').fill('100');
+    await page.waitForTimeout(400);
+    expect(await sum()).toBeLessThan(before);          // darker text, less light overall
+  });
+
   test('a deep link opens the tool directly', async ({ page }) => {
     await page.goto(BASE + '#downsize');
     await expect(page.locator('#view-downsize')).toBeVisible();
